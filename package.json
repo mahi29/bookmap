@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
-    "db:seed": "tsx scripts/seed.ts"
+    "db:seed": "tsx scripts/seed.ts",
+    "db:resolve": "tsx scripts/resolve-nationalities.ts"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.8.0",
