@@ -10,7 +10,7 @@ for now (no auth). See the full plan and ubiquitous language in
 ## Ubiquitous language
 
 - **Book** — a title with one or more Authors.
-- **Author** — resolved to exactly **one** *map country* (ISO 3166-1 alpha-3), defined as
+- **Author** — resolved to exactly **one** _map country_ (ISO 3166-1 alpha-3), defined as
   country of citizenship.
 - **Reading** — an event: "user finished Book on date X." Carries the date; all date-range
   filtering hangs off Readings.

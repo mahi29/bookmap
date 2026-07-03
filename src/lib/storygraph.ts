@@ -44,7 +44,8 @@ function splitAuthors(value: string | undefined): string[] {
  */
 function parseReadings(row: Row): ParsedReading[] {
   const rating = row["Star Rating"] ? Number(row["Star Rating"]) : null;
-  const ratingValue = rating !== null && Number.isFinite(rating) ? rating : null;
+  const ratingValue =
+    rating !== null && Number.isFinite(rating) ? rating : null;
 
   const datesRead = (row["Dates Read"] ?? "").trim();
   if (datesRead) {
