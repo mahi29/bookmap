@@ -1,26 +1,63 @@
-@import "tailwindcss";
+/*
+ * Global stylesheet: design tokens + a minimal reset. Components never hardcode
+ * colors/spacing — they reference these CSS custom properties (or their own
+ * co-located .module.css). This is the seam that keeps styling out of the markup.
+ */
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* Color tokens */
+  --surface: #ffffff;
+  --surface-raised: #f6f6f7;
+  --text: #171717;
+  --text-muted: #57575f;
+  --border: rgba(0, 0, 0, 0.1);
+  --accent: #2f7a52;
+  --accent-contrast: #ffffff;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Shape + layout */
+  --radius: 8px;
+  --radius-pill: 999px;
+  --max-content: 64rem;
+
+  /* Typography (font families wired via next/font in layout.tsx) */
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --surface: #0a0a0a;
+    --surface-raised: #16161a;
+    --text: #ededed;
+    --text-muted: #a1a1aa;
+    --border: rgba(255, 255, 255, 0.14);
+    --accent: #4ade80;
+    --accent-contrast: #06120b;
   }
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
 }

@@ -31,8 +31,10 @@ for now (no auth). See the full plan and ubiquitous language in
   - `src/lib/**` — the domain layer: parsing, nationality resolution, aggregation. Pure,
     framework-free, unit-tested. No React, no `next/*` imports here.
   - `src/lib/db.ts` — the single Prisma client instance. Data access lives close to it.
-  - No file mixes JSX + business logic + DB queries. Styling stays in Tailwind/CSS
-    Modules, not sprawling inline styles in logic files.
+  - No file mixes JSX + business logic + DB queries. **Styling uses co-located CSS
+    Modules with semantic class names**, referencing design tokens (CSS custom
+    properties in `globals.css`) — no Tailwind, no sprawling utility strings or inline
+    `style={{}}` in components.
 - **Pragmatic, not over-engineered.** Prefer the simplest thing that works. Introduce an
   abstraction only when there's a second real caller. No speculative frameworks. Readability
   over cleverness.
