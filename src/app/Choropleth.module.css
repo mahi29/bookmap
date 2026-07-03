@@ -1,0 +1,40 @@
+.wrap {
+  position: relative;
+  width: 100%;
+}
+
+.map {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.country {
+  stroke: var(--map-border);
+  stroke-width: 0.3px;
+  transition: fill 0.25s ease;
+  outline: none;
+}
+
+.country:hover {
+  stroke: var(--text);
+  stroke-width: 0.8px;
+}
+
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 10px));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  z-index: 2;
+}
+
+.count {
+  color: var(--text-muted);
+}

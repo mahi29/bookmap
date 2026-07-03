@@ -1,0 +1,59 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.stats {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.big {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.filterLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.6rem;
+  font: inherit;
+  cursor: pointer;
+}

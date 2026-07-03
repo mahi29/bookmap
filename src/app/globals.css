@@ -14,6 +14,12 @@
   --accent: #2f7a52;
   --accent-contrast: #ffffff;
 
+  /* Map: fill for countries with no reads, plus the border between countries. The
+     shaded fill is mixed from --accent toward --map-empty per country in the choropleth. */
+  --map-empty: #e6e6ea;
+  --map-border: #ffffff;
+  --map-ocean: transparent;
+
   /* Shape + layout */
   --radius: 8px;
   --radius-pill: 999px;
@@ -33,6 +39,8 @@
     --border: rgba(255, 255, 255, 0.14);
     --accent: #4ade80;
     --accent-contrast: #06120b;
+    --map-empty: #23232a;
+    --map-border: #0a0a0a;
   }
 }
 

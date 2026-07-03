@@ -1,14 +1,19 @@
+import { getCoverageEntries } from "@/lib/map-data";
+import { getCountryShapes } from "@/lib/geo";
+import MapView from "./MapView";
 import styles from "./page.module.css";
 
-export default function Home() {
+export default async function Home() {
+  const entries = await getCoverageEntries();
+  const shapes = getCountryShapes();
+
   return (
     <main className={styles.main}>
-      <span className={styles.eyebrow}>BookMap</span>
-      <h1 className={styles.title}>A map of what you&apos;ve read.</h1>
-      <p className={styles.subtitle}>
-        Import your reading history and watch the world shade in by the
-        nationality of the authors behind each book.
-      </p>
+      <header className={styles.hero}>
+        <span className={styles.eyebrow}>BookMap</span>
+        <h1 className={styles.title}>A map of what you&apos;ve read.</h1>
+      </header>
+      <MapView shapes={shapes} entries={entries} />
     </main>
   );
 }
