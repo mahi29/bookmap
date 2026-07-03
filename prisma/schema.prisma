@@ -1,0 +1,75 @@
+// BookMap data model. See CLAUDE.md for the ubiquitous language.
+// Local dev uses SQLite for zero-infra single-user development. To move to Postgres
+// later, change the datasource provider/url (Prisma makes the swap straightforward).
+//
+// SQLite notes: no native enums or Json columns, so enum-like fields (source,
+// resolutionMethod) are Strings validated in the app layer, and rawRow is a JSON string.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+/// A title with one or more Authors.
+model Book {
+  id        String       @id @default(cuid())
+  title     String
+  isbn      String? // ISBN or other UID from the source; nullable.
+  createdAt DateTime     @default(now())
+  authors   BookAuthor[]
+  readings  Reading[]
+}
+
+/// A person resolved to exactly one map country (country of citizenship, ISO alpha-3).
+model Author {
+  id                  String       @id @default(cuid())
+  name                String       @unique
+  wikidataId          String?
+  resolvedCountryIso3 String? // the single map country; null until resolved
+  birthCountryIso3    String? // secondary, for future views; never colors the map
+  resolutionMethod    String       @default("unresolved") // wikidata | openlibrary | llm | manual | unresolved
+  confidence          Float? // 0..1, present for llm/automated resolutions
+  reasoning           String? // human-readable justification (esp. for llm)
+  needsReview         Boolean      @default(false)
+  resolvedAt          DateTime?
+  books               BookAuthor[]
+}
+
+/// Join between Book and Author (books can be co-authored).
+model BookAuthor {
+  bookId   String
+  authorId String
+  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  author   Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, authorId])
+}
+
+/// A read event: "user finished Book on date X." Carries the dates for range filtering.
+model Reading {
+  id          String    @id @default(cuid())
+  bookId      String
+  book        Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  dateRead    DateTime? // finish date; null = undated (all-time only, excluded from ranges)
+  dateStarted DateTime?
+  rating      Float?
+  source      String // storygraph | goodreads | manual
+  importId    String?
+  import      Import?   @relation(fields: [importId], references: [id], onDelete: SetNull)
+  rawRow      String? // JSON-stringified original source row, for debugging/re-parsing
+  createdAt   DateTime  @default(now())
+}
+
+/// One CSV import run, tracked for dedup/idempotency.
+model Import {
+  id         String    @id @default(cuid())
+  source     String // storygraph | goodreads
+  filename   String
+  rowCount   Int
+  importedAt DateTime  @default(now())
+  readings   Reading[]
+}

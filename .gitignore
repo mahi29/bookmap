@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# prisma: local SQLite db + generated client (regenerated via `prisma generate`)
+/prisma/*.db
+/prisma/*.db-journal
+/src/generated
+
+# personal reading exports — never commit private data
+/data
