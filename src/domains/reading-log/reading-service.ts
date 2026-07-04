@@ -1,67 +1,12 @@
-import { ReadingSource, ResolutionMethod } from "../domains/shared/constants";
-import { prisma } from "../infrastructure/db/prisma";
-import { persistResolution } from "../infrastructure/db/prisma-author-resolution-repository";
-import { resolveAuthorNationality } from "../domains/nationality-resolution/wikidata-resolver";
+import { ReadingSource, ResolutionMethod } from "../shared/constants";
+import { prisma } from "../../infrastructure/db/prisma";
+import { persistResolution } from "../../infrastructure/db/prisma-author-resolution-repository";
+import { resolveAuthorNationality } from "../nationality-resolution/wikidata-resolver";
+import type { ReadingInput } from "./normalize-reading";
 
-// Add-reading domain: normalize form input (pure/tested) and persist a reading, resolving
-// any brand-new authors through the same Wikidata pipeline the seed uses.
-
-export interface ReadingInput {
-  title: string;
-  authors: string[];
-  dateRead: Date | null;
-  rating: number | null;
-}
-
-export interface RawReadingInput {
-  title: string;
-  authors: string;
-  dateRead?: string;
-  rating?: string;
-}
-
-export type NormalizeResult =
-  { ok: true; value: ReadingInput } | { ok: false; error: string };
-
-/** Pure: validate + normalize the raw form fields into a ReadingInput. */
-export function normalizeReadingInput(raw: RawReadingInput): NormalizeResult {
-  const title = raw.title.trim();
-  if (!title) return { ok: false, error: "Title is required." };
-
-  const authors = raw.authors
-    .split(",")
-    .map((a) => a.trim())
-    .filter(Boolean);
-  if (authors.length === 0)
-    return { ok: false, error: "At least one author is required." };
-
-  let dateRead: Date | null = null;
-  const dateStr = raw.dateRead?.trim();
-  if (dateStr) {
-    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!match) return { ok: false, error: "Date must be YYYY-MM-DD." };
-    const [, y, m, d] = match;
-    dateRead = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
-    const rolledOver =
-      dateRead.getUTCFullYear() !== Number(y) ||
-      dateRead.getUTCMonth() !== Number(m) - 1 ||
-      dateRead.getUTCDate() !== Number(d);
-    if (Number.isNaN(dateRead.getTime()) || rolledOver)
-      return { ok: false, error: "Invalid date." };
-  }
-
-  let rating: number | null = null;
-  const ratingStr = raw.rating?.trim();
-  if (ratingStr) {
-    const value = Number(ratingStr);
-    if (!Number.isFinite(value) || value < 0 || value > 5) {
-      return { ok: false, error: "Rating must be between 0 and 5." };
-    }
-    rating = value;
-  }
-
-  return { ok: true, value: { title, authors, dateRead, rating } };
-}
+// Add-reading application service: persist a reading, creating the book/authors as
+// needed and resolving any brand-new authors through the same Wikidata pipeline the
+// seed uses. See normalize-reading.ts for the pure input validation this consumes.
 
 /** Persist a reading, creating the book/authors as needed and resolving new authors. */
 export async function addReading(

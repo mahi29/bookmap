@@ -5,7 +5,7 @@ import {
 } from "../src/domains/shared/constants";
 import { prisma } from "../src/infrastructure/db/prisma";
 import { setManualCountries } from "../src/infrastructure/db/prisma-author-resolution-repository";
-import { parseStoryGraphCsv } from "../src/lib/storygraph";
+import { parseStoryGraphCsv } from "../src/domains/reading-log/storygraph-import";
 import { runScript } from "./shared";
 
 // Seed the DB from a StoryGraph CSV export. This is a dev convenience for single-user

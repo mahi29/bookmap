@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { countryName } from "@/domains/shared/countries";
-import { addReading, normalizeReadingInput } from "@/lib/readings";
+import { normalizeReadingInput } from "@/domains/reading-log/normalize-reading";
+import { addReading } from "@/domains/reading-log/reading-service";
 
 export interface AddReadingState {
   ok: boolean;

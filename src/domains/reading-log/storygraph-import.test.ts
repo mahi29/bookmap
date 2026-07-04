@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseStoryGraphCsv } from "./storygraph";
+import { parseStoryGraphCsv } from "./storygraph-import";
 
 // A reduced but valid StoryGraph export. Papaparse maps by header name, so we only
 // include the columns the parser reads. Rows are fabricated (no personal data).
