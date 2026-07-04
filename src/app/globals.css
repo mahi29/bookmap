@@ -11,7 +11,7 @@
   --text: #171717;
   --text-muted: #57575f;
   --border: rgba(0, 0, 0, 0.1);
-  --accent: #2f7a52;
+  --accent: #184e88;
   --accent-contrast: #ffffff;
 
   /* Map: fill for countries with no reads, plus the border between countries. The
@@ -37,8 +37,8 @@
     --text: #ededed;
     --text-muted: #a1a1aa;
     --border: rgba(255, 255, 255, 0.14);
-    --accent: #4ade80;
-    --accent-contrast: #06120b;
+    --accent: #3b8ce6;
+    --accent-contrast: #04121f;
     --map-empty: #23232a;
     --map-border: #0a0a0a;
   }
