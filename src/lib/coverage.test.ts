@@ -54,6 +54,30 @@ describe("computeCoverage (date range)", () => {
   });
 });
 
+describe("computeCoverage (exclusive upper bound)", () => {
+  it("excludes a reading dated exactly on `to`", () => {
+    const onBoundary: CoverageEntry[] = [
+      { bookId: "b1", iso3: "USA", dateRead: d("2025-01-01") },
+    ];
+    const result = computeCoverage(onBoundary, {
+      from: d("2024-01-01"),
+      to: d("2025-01-01"), // start of next year, as MapView constructs it
+    });
+    expect(result.byCountry).toEqual({});
+  });
+
+  it("includes a reading on the last instant of the final day of the range", () => {
+    const lastDay: CoverageEntry[] = [
+      { bookId: "b1", iso3: "USA", dateRead: new Date("2024-12-31T23:59:59Z") },
+    ];
+    const result = computeCoverage(lastDay, {
+      from: d("2024-01-01"),
+      to: d("2025-01-01"),
+    });
+    expect(result.byCountry).toEqual({ USA: 1 });
+  });
+});
+
 describe("computeCoverage (edge cases)", () => {
   it("returns empty coverage for no entries", () => {
     expect(computeCoverage([])).toEqual({

@@ -16,10 +16,21 @@
   flex-wrap: wrap;
 }
 
+.statsGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
 .stats {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
 
 .big {
@@ -33,6 +44,13 @@
 .label {
   color: var(--text-muted);
   font-size: 0.95rem;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
 }
 
 .filter {

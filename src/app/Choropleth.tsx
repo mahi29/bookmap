@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { geoEqualEarth, geoPath } from "d3-geo";
 import type { FeatureCollection } from "geojson";
-import type { CountryShape } from "@/lib/geo";
+import { getCountryShapes } from "@/lib/geo";
 import styles from "./Choropleth.module.css";
 
 const WIDTH = 960;
@@ -16,7 +16,6 @@ const MIN_SHADE_PCT = 15;
 const MAX_SHADE_PCT = 85;
 
 interface Props {
-  shapes: CountryShape[];
   byCountry: Record<string, number>;
   selectedIso3: string | null;
   onSelect: (iso3: string) => void;
@@ -39,13 +38,17 @@ function fillFor(count: number, max: number): string {
 }
 
 export default function Choropleth({
-  shapes,
   byCountry,
   selectedIso3,
   onSelect,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<Hover | null>(null);
+
+  // Loaded client-side (not passed from the server) so the static geometry ships as part
+  // of the cacheable client JS bundle instead of being re-serialized into the RSC payload
+  // on every request.
+  const shapes = useMemo(() => getCountryShapes(), []);
 
   const pathGen = useMemo(() => {
     const collection: FeatureCollection = {

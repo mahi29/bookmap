@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { getMapEntries } from "@/lib/map-data";
-import { getCountryShapes } from "@/lib/geo";
+import { getMapEntries, getNeedsReviewCount } from "@/lib/map-data";
 import MapView from "./MapView";
 import styles from "./page.module.css";
 
 export default async function Home() {
-  const entries = await getMapEntries();
-  const shapes = getCountryShapes();
+  const [entries, needsReviewCount] = await Promise.all([
+    getMapEntries(),
+    getNeedsReviewCount(),
+  ]);
 
   return (
     <main className={styles.main}>
@@ -17,7 +18,7 @@ export default async function Home() {
           + Add a reading
         </Link>
       </header>
-      <MapView shapes={shapes} entries={entries} />
+      <MapView entries={entries} needsReviewCount={needsReviewCount} />
     </main>
   );
 }
