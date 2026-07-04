@@ -1,8 +1,8 @@
 # BookMap — a reading tracker with an author-nationality map
 
 > **Living document.** This is the source of truth for BookMap's design and status. Update
-> it when decisions change. Last reconciled at the **code-quality checkpoint** (map polish +
-> LLM verify pass done; a refactor for modularity/readability landed).
+> it when decisions change. Last reconciled at the **PR7 + deploy checkpoint** (multi-user
+> auth shipped; live in production on Vercel + a Neon prod branch).
 
 ## Context
 
@@ -14,20 +14,20 @@ date range (e.g. "countries I read in 2026"). Multi-user with username/password 
 
 ## Status at a glance
 
-| Area                                    | State                                                                 |
-| --------------------------------------- | --------------------------------------------------------------------- |
-| PR1 — Scaffold + model + seed           | ✅ done                                                               |
-| PR2 — Wikidata nationality resolution   | ✅ done                                                               |
-| PR3 — Choropleth map + period filter    | ✅ done                                                               |
-| PR4 — LLM fallback + corrections        | ✅ done (review **UI** built then replaced by direct DB edits)        |
-| Multi-country nationality               | ✅ done (mid-course change — authors now hold _all_ citizenships)     |
-| PR5 — "Add reading" flow                | ✅ done                                                               |
-| Map polish (legend + country pane)      | ✅ done                                                               |
-| LLM verify pass + code-quality refactor | ✅ done (this checkpoint)                                             |
-| PR6 — CSV importer UI                   | ⬜ not started                                                        |
-| Deploy (Postgres + Vercel)              | 🟡 in progress — code swapped to Postgres, awaiting Neon/Vercel setup |
-| PR7 — Multi-user auth                   | ✅ done (hand-rolled credentials — see below)                         |
-| Future enhancements                     | ⬜ see bottom section                                                 |
+| Area                                    | State                                                             |
+| --------------------------------------- | ----------------------------------------------------------------- |
+| PR1 — Scaffold + model + seed           | ✅ done                                                           |
+| PR2 — Wikidata nationality resolution   | ✅ done                                                           |
+| PR3 — Choropleth map + period filter    | ✅ done                                                           |
+| PR4 — LLM fallback + corrections        | ✅ done (review **UI** built then replaced by direct DB edits)    |
+| Multi-country nationality               | ✅ done (mid-course change — authors now hold _all_ citizenships) |
+| PR5 — "Add reading" flow                | ✅ done                                                           |
+| Map polish (legend + country pane)      | ✅ done                                                           |
+| LLM verify pass + code-quality refactor | ✅ done (this checkpoint)                                         |
+| PR6 — CSV importer UI                   | ⬜ not started                                                    |
+| Deploy (Postgres + Vercel)              | ✅ done — live at bookmap-flame.vercel.app (Neon prod branch)     |
+| PR7 — Multi-user auth                   | ✅ done (hand-rolled credentials — see below)                     |
+| Future enhancements                     | ⬜ see bottom section                                             |
 
 ## Ubiquitous language (shared glossary)
 
@@ -160,6 +160,11 @@ needed. Manual picks survive the whole loop.
   a `ResolutionMethod` / `ReadingSource` constants module (no more stray string literals), a
   `scripts/shared.ts` harness (`runScript`, `sleep`, `createLlmClient`), and named the map's
   shading-ramp constants. Behavior-preserving; 60 tests still green.
+- **PR7 — Multi-user auth + prod deploy** — hand-rolled credentials (bcryptjs + jose
+  session cookie, open signup), `Reading`/`Import` scoped by `userId` with Books/Authors
+  global, existing readings backfilled to a bootstrap `mahith` user via the migration.
+  Shipped live to https://bookmap-flame.vercel.app on a dedicated Neon prod branch. Full
+  detail in the Deploy bullet under the (now historical) "Remaining work" section below.
 
 ## Current data state (local dev.db, gitignored)
 
@@ -174,10 +179,10 @@ needed. Manual picks survive the whole loop.
 
 ## Remaining work
 
-- **Deploy — deliberately split from PR7 auth.** Decided 2026-07-04: shipping to a public
-  URL doesn't need multi-user auth solved first, so they're separate efforts. This phase
-  stays **single implicit user, no login** — just running on Postgres/Vercel instead of a
-  local SQLite file.
+- **Deploy — ✅ done (2026-07-04). Live at https://bookmap-flame.vercel.app** (auth-gated).
+  Was deliberately split from PR7 auth (shipping to a public URL didn't need multi-user
+  solved first), but both landed together in the end: the site went live already running
+  the PR7 auth code, so there was never a public no-login phase in production.
   - **Code done:** schema `datasource` provider → `postgresql`; `src/lib/db.ts` and
     `prisma.config.ts` use `@prisma/adapter-pg` / `PrismaPg`. `DATABASE_URL` (pooled, for
     the running app) and `DIRECT_URL` (unpooled, for `prisma migrate` — PgBouncer's
@@ -197,13 +202,26 @@ needed. Manual picks survive the whole loop.
     re-creatable the same way for the production branch when ready). Verified via
     `npm run db:check` (all 4 checks pass) and Preview MCP: 28 countries · 236 books,
     matching pre-migration exactly.
-  - **Still needs a human:** connect the GitHub repo to a Vercel project (a first deploy
-    already happened — confirmed a working build; note the home page is now
-    request-dynamic since PR7 reads the session cookie), set `DATABASE_URL`/`DIRECT_URL`
-    there to a **production** Neon branch (separate from `dev`) **plus a fresh
-    `SESSION_SECRET`** (PR7), then `prisma migrate deploy` against it (creates `User`,
-    backfills existing readings to the LOCKED `mahith` bootstrap account) and claim the
-    account with `db:set-password` pointed at prod.
+  - **Prod cutover (done):** the GitHub repo is connected to a Vercel project that
+    auto-deploys from `main` and points at a **separate** production Neon branch
+    (host `ep-broad-haze`, distinct from local dev's `ep-patient-paper` — the two are
+    independent databases, each with its own copy of the readings). Vercel env has
+    `DATABASE_URL` (prod pooled) and a fresh `SESSION_SECRET`; `DIRECT_URL` /
+    `ANTHROPIC_API_KEY` are not needed at runtime. Note the Vercel build runs only
+    `next build` + `prisma generate` — **migrations are NOT auto-applied on deploy**, so
+    schema changes must be pushed to prod manually with `prisma migrate deploy` (pointed
+    at the prod branch) **before** deploying code that depends on them. The home page is
+    request-dynamic (reads the session cookie), no longer prerendered.
+  - **PR7 prod migration (done):** ran `prisma migrate deploy` against the prod branch
+    (applied `add_user` + `reading_import_per_user`, creating the LOCKED `mahith`
+    bootstrap user and backfilling all 238 prod readings + 1 import to it), then claimed
+    the account with `db:set-password -- mahith …` pointed at prod, then pushed `main`.
+    Live site verified: `/` redirects to `/login`; logging in as `mahith` shows the map.
+  - **Future schema-change recipe for prod:** (1) `prisma migrate deploy` against the
+    prod branch first (additive/backfill migrations keep the currently-deployed code
+    working), (2) then `git push origin main` to redeploy the code. Never push
+    schema-dependent code before the prod migration runs, or the live site 500s until it
+    does.
   - `ANTHROPIC_API_KEY` is only used by the offline `db:resolve-llm`/`db:verify-llm`
     scripts, run manually against whichever `DATABASE_URL` you point at — it is not needed
     as a Vercel env var for the deployed app.
