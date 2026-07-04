@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Nested agent worktrees (created under .claude/worktrees during parallel
+    // multi-agent runs) carry their own .next/node_modules copies; scan only
+    // the real tree.
+    ".claude/**",
   ]),
 ]);
 
