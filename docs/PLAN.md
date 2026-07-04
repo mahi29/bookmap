@@ -14,19 +14,20 @@ date range (e.g. "countries I read in 2026"). Single-user, no auth yet. Repo:
 
 ## Status at a glance
 
-| Area                                    | State                                                             |
-| --------------------------------------- | ----------------------------------------------------------------- |
-| PR1 — Scaffold + model + seed           | ✅ done                                                           |
-| PR2 — Wikidata nationality resolution   | ✅ done                                                           |
-| PR3 — Choropleth map + period filter    | ✅ done                                                           |
-| PR4 — LLM fallback + corrections        | ✅ done (review **UI** built then replaced by direct DB edits)    |
-| Multi-country nationality               | ✅ done (mid-course change — authors now hold _all_ citizenships) |
-| PR5 — "Add reading" flow                | ✅ done                                                           |
-| Map polish (legend + country pane)      | ✅ done                                                           |
-| LLM verify pass + code-quality refactor | ✅ done (this checkpoint)                                         |
-| PR6 — CSV importer UI                   | ⬜ not started                                                    |
-| PR7 — Multi-user auth                   | ⬜ future                                                         |
-| Future enhancements                     | ⬜ see bottom section                                             |
+| Area                                    | State                                                                 |
+| --------------------------------------- | --------------------------------------------------------------------- |
+| PR1 — Scaffold + model + seed           | ✅ done                                                               |
+| PR2 — Wikidata nationality resolution   | ✅ done                                                               |
+| PR3 — Choropleth map + period filter    | ✅ done                                                               |
+| PR4 — LLM fallback + corrections        | ✅ done (review **UI** built then replaced by direct DB edits)        |
+| Multi-country nationality               | ✅ done (mid-course change — authors now hold _all_ citizenships)     |
+| PR5 — "Add reading" flow                | ✅ done                                                               |
+| Map polish (legend + country pane)      | ✅ done                                                               |
+| LLM verify pass + code-quality refactor | ✅ done (this checkpoint)                                             |
+| PR6 — CSV importer UI                   | ⬜ not started                                                        |
+| Deploy (Postgres + Vercel)              | 🟡 in progress — code swapped to Postgres, awaiting Neon/Vercel setup |
+| PR7 — Multi-user auth                   | ⬜ future — deliberately split from Deploy (see below)                |
+| Future enhancements                     | ⬜ see bottom section                                                 |
 
 ## Ubiquitous language (shared glossary)
 
@@ -65,9 +66,11 @@ date range (e.g. "countries I read in 2026"). Single-user, no auth yet. Repo:
 ## Tech stack (as built)
 
 - **Next.js 16 (App Router) + TypeScript** — one app; React 19; Server Actions for mutations.
-- **Prisma 7 + SQLite** via the engine-free client + `@prisma/adapter-better-sqlite3` and a
-  `prisma.config.ts`. Chosen over Postgres for zero-infra local single-user; swappable to
-  Postgres (`@prisma/adapter-pg`) for deploy.
+- **Prisma 7 + Postgres (Neon)** via the engine-free client + `@prisma/adapter-pg` and a
+  `prisma.config.ts`. One Postgres provider for both dev and prod — `DATABASE_URL` selects
+  a separate Neon branch/database per environment (no local-file fallback). Originally
+  SQLite for zero-infra local dev; moved to Postgres ahead of deploy so dev/prod share one
+  SQL dialect instead of maintaining two.
 - **`d3-geo` + `topojson-client` + `world-atlas`**, rendered as SVG in our own `Choropleth`
   component. (`react-simple-maps` is React-18-only, so we hand-rolled.) Geometry joined to
   data via `world-countries` (ISO numeric ↔ alpha-3). Shading uses `color-mix` over design
@@ -163,6 +166,26 @@ needed. Manual picks survive the whole loop.
 
 ## Remaining work
 
+- **Deploy — deliberately split from PR7 auth.** Decided 2026-07-04: shipping to a public
+  URL doesn't need multi-user auth solved first, so they're separate efforts. This phase
+  stays **single implicit user, no login** — just running on Postgres/Vercel instead of a
+  local SQLite file.
+  - **Code done:** schema `datasource` provider → `postgresql`; `src/lib/db.ts` and
+    `prisma.config.ts` use `@prisma/adapter-pg` / `PrismaPg` with `DATABASE_URL` (required,
+    no fallback — see `.env.example`); old SQLite migration history removed (incompatible
+    SQL dialect; a fresh `prisma migrate dev --name init` generates the real one once a
+    Postgres connection exists). One Postgres provider for **both** dev and prod via
+    separate Neon branches, not a dual SQLite-dev/Postgres-prod setup — avoids maintaining
+    two SQL dialects for no real benefit at this scale.
+  - **Needs a human:** create a Neon project (grab a dev-branch connection string for
+    local `.env`, a prod-branch one for Vercel), connect the GitHub repo to a Vercel
+    project, set `DATABASE_URL` there, then run the initial migration against each branch.
+    Existing local data (28 countries, 236 books, manual picks) should be **migrated**, not
+    re-seeded from scratch, to avoid re-paying for LLM resolution and losing corrections
+    already made.
+  - `ANTHROPIC_API_KEY` is only used by the offline `db:resolve-llm`/`db:verify-llm`
+    scripts, run manually against whichever `DATABASE_URL` you point at — it is not needed
+    as a Vercel env var for the deployed app.
 - **PR6 — CSV importer UI.** Promote the seed script into an upload page: StoryGraph first,
   then Goodreads (needs a Goodreads CSV parser); source tagging; dedup by ISBN/title+date;
   idempotent re-import; import summary.
@@ -171,8 +194,11 @@ needed. Manual picks survive the whole loop.
     normalized title + author-set match, AND the same read date. Re-imports must be
     idempotent under this key (a no-op on repeat). Note: author-set matching inherits the
     `Author.name` uniqueness assumption below (same name = same author).
-- **PR7 — Multi-user auth.** Auth.js (NextAuth); scope all data by `userId`; optional
-  shareable public map. Would also motivate the Postgres swap for deploy.
+- **PR7 — Multi-user auth.** Deliberately **deferred**, decoupled from Deploy above (decided
+  2026-07-04). When picked up: Auth.js (NextAuth), invite-only sign-in (a checked-in
+  allowlist or an `Invite` table — no open registration), scope all data by `userId`. Do the
+  `docs/REVIEW.md` **C1 DDD reorg** immediately before starting this — it touches exactly
+  the files this PR needs to thread `userId` through.
   - **Data-scoping decision:** `Reading` and `Import` become per-user (add a `userId` FK,
     scope all reading/import queries by the logged-in user). `Book`, `Author`, and
     `AuthorCountry` stay **global/shared** — an author's nationality is a universal fact,
@@ -187,7 +213,6 @@ needed. Manual picks survive the whole loop.
   Title search → pick a result → autofill; ISBN lookup is unambiguous. Fully hands-free entry
   would need barcode/ISBN scanning (browser `BarcodeDetector` + camera). The picked author
   still flows through the existing Wikidata resolution. Manual entry stays as the fallback.
-- **Deploy** — swap SQLite → Postgres (Neon) and ship on Vercel.
 - **LLM sweep** — with `ANTHROPIC_API_KEY` in `.env`: `db:resolve-llm` clears the review
   queue, and `db:verify-llm` re-checks **all** non-manual authors against their book titles
   to catch wrong-but-confident Wikidata matches. Manual picks are never touched. (Cost ~$1

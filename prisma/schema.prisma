@@ -1,9 +1,10 @@
 // BookMap data model. See CLAUDE.md for the ubiquitous language.
-// Local dev uses SQLite for zero-infra single-user development. To move to Postgres
-// later, change the datasource provider/url (Prisma makes the swap straightforward).
+// Postgres (Neon) for both dev and prod — DATABASE_URL points at a separate branch/
+// database per environment; see src/lib/db.ts and prisma.config.ts.
 //
-// SQLite notes: no native enums or Json columns, so enum-like fields (source,
-// resolutionMethod) are Strings validated in the app layer, and rawRow is a JSON string.
+// Enum-like fields (source, resolutionMethod) stay app-validated Strings rather than
+// native Postgres enums, and rawRow stays a JSON string rather than a Json column —
+// carried over unchanged from the original SQLite design; no reason to churn them now.
 
 generator client {
   provider = "prisma-client"
@@ -11,7 +12,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 /// A title with one or more Authors.

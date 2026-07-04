@@ -1,14 +1,16 @@
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 
 // Prisma 7's engine-free client takes a driver adapter instead of a datasource url.
-// Local dev points at the SQLite file under prisma/, overridable via DATABASE_URL so a
-// future path/Postgres-connection-string change is a pure env-var change. Swapping to
-// Postgres later means swapping this adapter (e.g. @prisma/adapter-pg) and the schema
-// provider.
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? "file:./prisma/dev.db",
-});
+// Postgres (Neon) for both dev and prod: DATABASE_URL selects the branch/database per
+// environment (no local-file fallback — there's no sane default connection string).
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL is not set — point it at a Postgres connection string (e.g. a Neon branch).",
+  );
+}
+
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 
 // Reuse a single client across hot reloads in dev to avoid exhausting connections.
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
