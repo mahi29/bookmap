@@ -1,4 +1,4 @@
-import { prisma } from "../src/lib/db";
+import { prisma } from "../src/infrastructure/db/prisma";
 import { resolveAuthorNationalityLLM } from "../src/lib/nationality/llm";
 import { persistResolution } from "../src/lib/nationality/persist";
 import { createLlmClient, MAX_TITLES, runScript, sleep } from "./shared";

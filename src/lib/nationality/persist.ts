@@ -1,6 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { ResolutionMethod } from "../constants";
-import { prisma } from "../db";
+import { prisma } from "../../infrastructure/db/prisma";
 import type { ResolutionResult } from "./resolve";
 
 // The single place that writes an author's resolution to the database. Every resolver

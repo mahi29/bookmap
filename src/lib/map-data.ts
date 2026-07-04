@@ -1,4 +1,4 @@
-import { prisma } from "./db";
+import { prisma } from "../infrastructure/db/prisma";
 import type { DetailEntry } from "./coverage";
 
 // Server data access: flatten readings -> books -> each author's map countries into

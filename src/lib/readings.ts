@@ -1,5 +1,5 @@
 import { ReadingSource, ResolutionMethod } from "./constants";
-import { prisma } from "./db";
+import { prisma } from "../infrastructure/db/prisma";
 import { persistResolution } from "./nationality/persist";
 import { resolveAuthorNationality } from "./nationality/wikidata";
 

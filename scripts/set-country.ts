@@ -1,5 +1,5 @@
 import { countryName, resolveToMapCountry } from "../src/lib/countries";
-import { prisma } from "../src/lib/db";
+import { prisma } from "../src/infrastructure/db/prisma";
 import { setManualCountries } from "../src/lib/nationality/persist";
 import { runScript } from "./shared";
 

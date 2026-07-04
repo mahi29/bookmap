@@ -62,7 +62,7 @@ function genId(prefix: string) {
   return `${prefix}${nextId++}`;
 }
 
-vi.mock("./db", () => ({
+vi.mock("../infrastructure/db/prisma", () => ({
   prisma: {
     book: {
       findFirst: vi.fn(async ({ where, include }: BookFindFirstArgs) => {

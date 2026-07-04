@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import Anthropic from "@anthropic-ai/sdk";
-import { prisma } from "../src/lib/db";
+import { prisma } from "../src/infrastructure/db/prisma";
 import type { LlmClient } from "../src/lib/nationality/llm";
 
 // Small shared infrastructure for the db:* scripts. Deliberately a couple of functions,
