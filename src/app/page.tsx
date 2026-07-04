@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getCoverageEntries } from "@/lib/map-data";
 import { getCountryShapes } from "@/lib/geo";
 import MapView from "./MapView";
@@ -12,6 +13,9 @@ export default async function Home() {
       <header className={styles.hero}>
         <span className={styles.eyebrow}>BookMap</span>
         <h1 className={styles.title}>A map of what you&apos;ve read.</h1>
+        <Link className={styles.addLink} href="/add">
+          + Add a reading
+        </Link>
       </header>
       <MapView shapes={shapes} entries={entries} />
     </main>
