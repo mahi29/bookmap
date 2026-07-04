@@ -27,30 +27,33 @@ export async function persistResolution(
   authorId: string,
   result: ResolutionWrite,
 ): Promise<boolean> {
-  const author = await prisma.author.findUnique({
-    where: { id: authorId },
-    select: { resolutionMethod: true },
-  });
-  if (author?.resolutionMethod === ResolutionMethod.Manual) return false;
-
-  await prisma.author.update({
-    where: { id: authorId },
-    data: {
-      resolutionMethod: result.method,
-      confidence: result.confidence,
-      reasoning: result.reasoning,
-      needsReview: result.needsReview,
-      ...(result.wikidataId !== undefined
-        ? { wikidataId: result.wikidataId }
-        : {}),
-      resolvedAt: new Date(),
-      countries: {
-        deleteMany: {},
-        create: result.iso3s.map((iso3) => ({ iso3 })),
+  // The manual guard is part of the write itself (updateMany's where), not a separate
+  // read — a concurrent db:set can't slip between check and update. The country
+  // replacement rides in the same transaction so a guarded no-op writes nothing.
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.author.updateMany({
+      where: { id: authorId, ...NON_MANUAL },
+      data: {
+        resolutionMethod: result.method,
+        confidence: result.confidence,
+        reasoning: result.reasoning,
+        needsReview: result.needsReview,
+        ...(result.wikidataId !== undefined
+          ? { wikidataId: result.wikidataId }
+          : {}),
+        resolvedAt: new Date(),
       },
-    },
+    });
+    if (updated.count === 0) return false;
+
+    await tx.authorCountry.deleteMany({ where: { authorId } });
+    if (result.iso3s.length > 0) {
+      await tx.authorCountry.createMany({
+        data: result.iso3s.map((iso3) => ({ authorId, iso3 })),
+      });
+    }
+    return true;
   });
-  return true;
 }
 
 /**
