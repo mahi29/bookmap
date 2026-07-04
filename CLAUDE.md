@@ -4,8 +4,8 @@
 
 A personal reading tracker whose signature feature is a **choropleth world map** shading
 each country by how much the user has read from authors of that nationality. Single-user
-for now (no auth). See the full plan and ubiquitous language in
-`~/.claude/plans/i-want-to-build-recursive-puddle.md`.
+for now (no auth). See the full plan, status, and ubiquitous language in
+[`docs/PLAN.md`](docs/PLAN.md) — keep it updated as the living source of truth.
 
 ## Ubiquitous language
 
