@@ -30,3 +30,16 @@
   line-height: 1.1;
   letter-spacing: -0.02em;
 }
+
+.reviewLink {
+  align-self: flex-start;
+  margin-top: 0.35rem;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.reviewLink:hover {
+  text-decoration: underline;
+}

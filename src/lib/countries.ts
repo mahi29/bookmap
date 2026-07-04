@@ -89,3 +89,10 @@ export function resolveToMapCountry(input: string): string | null {
     null
   );
 }
+
+/** All modern map countries, sorted by name — for the review-queue dropdown. */
+export function allMapCountries(): { iso3: string; name: string }[] {
+  return [...CODE_TO_NAME.entries()]
+    .map(([iso3, name]) => ({ iso3, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
