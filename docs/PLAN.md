@@ -1,7 +1,8 @@
 # BookMap — a reading tracker with an author-nationality map
 
 > **Living document.** This is the source of truth for BookMap's design and status. Update
-> it when decisions change. Last reconciled with the code after the "Add reading" flow (PR5).
+> it when decisions change. Last reconciled at the **code-quality checkpoint** (map polish +
+> LLM verify pass done; a refactor for modularity/readability landed).
 
 ## Context
 
@@ -21,6 +22,8 @@ date range (e.g. "countries I read in 2026"). Single-user, no auth yet. Repo:
 | PR4 — LLM fallback + corrections      | ✅ done (review **UI** built then replaced by direct DB edits)    |
 | Multi-country nationality             | ✅ done (mid-course change — authors now hold _all_ citizenships) |
 | PR5 — "Add reading" flow              | ✅ done                                                           |
+| Map polish (legend + country pane)    | ✅ done                                                           |
+| LLM verify pass + code-quality refactor | ✅ done (this checkpoint)                                        |
 | PR6 — CSV importer UI                 | ⬜ not started                                                    |
 | PR7 — Multi-user auth                 | ⬜ future                                                         |
 | Future enhancements                   | ⬜ see bottom section                                             |
@@ -135,6 +138,23 @@ needed. Manual picks survive the whole loop.
   brand-new authors through Wikidata on submit so the map updates immediately.
 - **Map polish** — a shading legend, and clickable countries that open a sliding right pane
   listing that country's books (title · authors · read date, most-recent first, range-aware).
+- **LLM verify pass (`db:verify-llm`)** — ran Claude over all non-manual authors with book-title
+  context; corrected 60 (wrong-person matches like Óscar Martínez→Spain, plus enriched dual
+  nationals like Hosseini→AFG+USA) and collapsed the review queue from ~43 to 5.
+- **Code-quality checkpoint** — extracted `persistResolution` / `setManualCountries` (single
+  author-write path; the "never clobber a manual pick" invariant is enforced here, not scattered),
+  a `ResolutionMethod` / `ReadingSource` constants module (no more stray string literals), a
+  `scripts/shared.ts` harness (`runScript`, `sleep`, `createLlmClient`), and named the map's
+  shading-ramp constants. Behavior-preserving; 60 tests still green.
+
+## Current data state (local dev.db, gitignored)
+
+- ~28 countries · ~236 read books on the map. **5 authors still need a manual country**
+  (LLM couldn't place them): Eunice Hong, Jeffrey Wilson, Evan Winter, Matthew Campbell,
+  Tom Wright — set with `db:set -- "Name" ISO3`.
+- The DB holds all 301 CSV books (238 read + 63 unread); **only read books reach the map**.
+  Open decision: whether to make the seed read-only + clean up the 63 unread books and their
+  53 authors (resolved for nothing). Not a bug — the map is correct either way.
 
 ## Remaining work
 
@@ -155,8 +175,19 @@ needed. Manual picks survive the whole loop.
 - **Deploy** — swap SQLite → Postgres (Neon) and ship on Vercel.
 - **LLM sweep** — with `ANTHROPIC_API_KEY` in `.env`: `db:resolve-llm` clears the review
   queue, and `db:verify-llm` re-checks **all** non-manual authors against their book titles
-  to catch wrong-but-confident Wikidata matches (e.g. a common name that hit the wrong
-  person). Manual picks are never touched.
+  to catch wrong-but-confident Wikidata matches. Manual picks are never touched. (Cost ~$1
+  for the full library on Opus 4.8.)
+
+### Known follow-ups / tech debt (from the code review, deferred by choice)
+
+- **Memoize `getCountryShapes()`** (`geo.ts`) — it re-parses the TopoJSON on every request
+  though the shapes are static; compute once at module load.
+- **Integration test for `addReading`** (`readings.ts`) — the pure normalizer is tested; the
+  DB+resolve mutation is only verified manually.
+- **Map keyboard/a11y** — `Choropleth` paths are click-only; `CountryPanel` has no Escape/focus
+  management. Fine for personal use; revisit if it goes public.
+- **`getMapEntries` ships the whole dataset to the client** — great at current scale; move
+  aggregation server-side if the library gets large or goes multi-user.
 
 ## Verification
 
