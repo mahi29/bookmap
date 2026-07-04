@@ -1,5 +1,5 @@
 import { ResolutionMethod } from "../shared/constants";
-import { countryName, resolveToMapCountry } from "../shared/countries";
+import { countryName, resolveToMapCountries } from "../shared/countries";
 
 export type { ResolutionMethod };
 
@@ -27,7 +27,10 @@ export interface ResolutionResult {
   needsReview: boolean;
 }
 
-function unresolved(reasoning: string): ResolutionResult {
+/** Shared "nothing resolved" result — every resolver (Wikidata, LLM) returns this shape
+ * when it has no confident answer, so the review queue always looks the same regardless
+ * of which resolver flagged the author. */
+export function unresolved(reasoning: string): ResolutionResult {
   return {
     iso3s: [],
     method: ResolutionMethod.Unresolved,
@@ -43,14 +46,9 @@ export function chooseMapCountry(
   source: ResolutionMethod = ResolutionMethod.Wikidata,
 ): ResolutionResult {
   const active = citizenships.filter((c) => c.rank !== "deprecated");
-
-  const iso3s = [
-    ...new Set(
-      active
-        .map((c) => resolveToMapCountry(c.isoAlpha3 ?? c.label))
-        .filter((iso): iso is string => iso !== null),
-    ),
-  ];
+  const iso3s = resolveToMapCountries(
+    active.map((c) => c.isoAlpha3 ?? c.label),
+  );
 
   if (iso3s.length === 0) {
     return unresolved(

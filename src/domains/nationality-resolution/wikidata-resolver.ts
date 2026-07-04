@@ -1,6 +1,7 @@
 import { ResolutionMethod } from "../shared/constants";
 import {
   chooseMapCountry,
+  unresolved,
   type CitizenshipRank,
   type RawCitizenship,
   type ResolutionResult,
@@ -135,16 +136,12 @@ export async function resolveAuthorNationality(
   fetchFn: FetchFn = fetch,
 ): Promise<AuthorResolution> {
   const hits = await searchEntities(name, fetchFn);
-  const unresolved = (reasoning: string): AuthorResolution => ({
-    iso3s: [],
-    method: ResolutionMethod.Unresolved,
-    confidence: 0,
-    reasoning,
-    needsReview: true,
-    wikidataId: null,
-  });
 
-  if (hits.length === 0) return unresolved("No Wikidata match for author name");
+  if (hits.length === 0)
+    return {
+      ...unresolved("No Wikidata match for author name"),
+      wikidataId: null,
+    };
 
   const entities = await getEntities(
     hits.map((h) => h.id),
@@ -182,5 +179,8 @@ export async function resolveAuthorNationality(
     };
   }
 
-  return unresolved("No matching person found on Wikidata");
+  return {
+    ...unresolved("No matching person found on Wikidata"),
+    wikidataId: null,
+  };
 }

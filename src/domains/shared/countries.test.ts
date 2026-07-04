@@ -3,6 +3,7 @@ import {
   isValidMapCountry,
   countryName,
   resolveToMapCountry,
+  resolveToMapCountries,
 } from "./countries";
 
 describe("isValidMapCountry", () => {
@@ -62,5 +63,26 @@ describe("resolveToMapCountry", () => {
   it("returns null for unknown input", () => {
     expect(resolveToMapCountry("Narnia")).toBeNull();
     expect(resolveToMapCountry("")).toBeNull();
+  });
+});
+
+describe("resolveToMapCountries", () => {
+  it("maps each input and drops unresolvable ones", () => {
+    expect(resolveToMapCountries(["Japan", "Narnia", "USA"])).toEqual([
+      "JPN",
+      "USA",
+    ]);
+  });
+
+  it("dedupes repeats and aliases of the same country", () => {
+    expect(resolveToMapCountries(["UK", "England", "GBR"])).toEqual(["GBR"]);
+  });
+
+  it("returns an empty array when nothing resolves", () => {
+    expect(resolveToMapCountries(["Narnia", ""])).toEqual([]);
+  });
+
+  it("returns an empty array for an empty input list", () => {
+    expect(resolveToMapCountries([])).toEqual([]);
   });
 });

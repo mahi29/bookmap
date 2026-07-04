@@ -89,3 +89,18 @@ export function resolveToMapCountry(input: string): string | null {
     null
   );
 }
+
+/**
+ * Resolve a list of raw country references to the set of distinct modern map countries
+ * they name, dropping any that don't resolve. Shared by every resolver (Wikidata, LLM)
+ * that turns a source's raw country strings into a ResolutionResult's iso3s.
+ */
+export function resolveToMapCountries(inputs: string[]): string[] {
+  return [
+    ...new Set(
+      inputs
+        .map((input) => resolveToMapCountry(input))
+        .filter((iso): iso is string => iso !== null),
+    ),
+  ];
+}

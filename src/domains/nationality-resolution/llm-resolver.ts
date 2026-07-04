@@ -1,6 +1,6 @@
 import { ResolutionMethod } from "../shared/constants";
-import { countryName, resolveToMapCountry } from "../shared/countries";
-import type { ResolutionResult } from "./resolve-country";
+import { countryName, resolveToMapCountries } from "../shared/countries";
+import { unresolved, type ResolutionResult } from "./resolve-country";
 
 // LLM fallback: for authors Wikidata couldn't resolve, ask Claude for the author's
 // countries of citizenship (usually one, sometimes two), using their book titles as
@@ -53,21 +53,11 @@ const SYSTEM_PROMPT = `You determine an author's countries of citizenship — th
 Given the author's name and some titles they wrote, respond with the ISO 3166-1 alpha-3 code(s) of every country the author holds citizenship in. Most authors have one; dual nationals (e.g. a Ghanaian-American novelist) have two — list all of them.
 Use the book titles to disambiguate common names. If you cannot identify the author with reasonable confidence, return an empty list.`;
 
-function mapCountries(raw: string[]): string[] {
-  return [
-    ...new Set(
-      (raw ?? [])
-        .map((c) => resolveToMapCountry(c))
-        .filter((iso): iso is string => iso !== null),
-    ),
-  ];
-}
-
 /** Pure: turn the model's structured answer into a resolution, applying the confidence gate. */
 export function interpretLlmResult(raw: LlmRawResult): ResolutionResult {
   const rawConfidence = Number.isFinite(raw.confidence) ? raw.confidence : 0;
   const confidence = Math.max(0, Math.min(1, rawConfidence));
-  const iso3s = mapCountries(raw.countryIso3s);
+  const iso3s = resolveToMapCountries(raw.countryIso3s);
   const names = iso3s.map((c) => countryName(c) ?? c).join(", ");
 
   if (iso3s.length > 0 && confidence >= CONFIDENCE_THRESHOLD) {
@@ -127,12 +117,6 @@ export async function resolveAuthorNationalityLLM(
     });
     return interpretLlmResult(parseResponse(message));
   } catch (error) {
-    return {
-      iso3s: [],
-      method: ResolutionMethod.Unresolved,
-      confidence: 0,
-      reasoning: `LLM resolution failed: ${(error as Error).message}`,
-      needsReview: true,
-    };
+    return unresolved(`LLM resolution failed: ${(error as Error).message}`);
   }
 }
