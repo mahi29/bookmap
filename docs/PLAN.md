@@ -14,19 +14,19 @@ date range (e.g. "countries I read in 2026"). Single-user, no auth yet. Repo:
 
 ## Status at a glance
 
-| Area                                  | State                                                             |
-| ------------------------------------- | ----------------------------------------------------------------- |
-| PR1 — Scaffold + model + seed         | ✅ done                                                           |
-| PR2 — Wikidata nationality resolution | ✅ done                                                           |
-| PR3 — Choropleth map + period filter  | ✅ done                                                           |
-| PR4 — LLM fallback + corrections      | ✅ done (review **UI** built then replaced by direct DB edits)    |
-| Multi-country nationality             | ✅ done (mid-course change — authors now hold _all_ citizenships) |
-| PR5 — "Add reading" flow              | ✅ done                                                           |
-| Map polish (legend + country pane)    | ✅ done                                                           |
-| LLM verify pass + code-quality refactor | ✅ done (this checkpoint)                                        |
-| PR6 — CSV importer UI                 | ⬜ not started                                                    |
-| PR7 — Multi-user auth                 | ⬜ future                                                         |
-| Future enhancements                   | ⬜ see bottom section                                             |
+| Area                                    | State                                                             |
+| --------------------------------------- | ----------------------------------------------------------------- |
+| PR1 — Scaffold + model + seed           | ✅ done                                                           |
+| PR2 — Wikidata nationality resolution   | ✅ done                                                           |
+| PR3 — Choropleth map + period filter    | ✅ done                                                           |
+| PR4 — LLM fallback + corrections        | ✅ done (review **UI** built then replaced by direct DB edits)    |
+| Multi-country nationality               | ✅ done (mid-course change — authors now hold _all_ citizenships) |
+| PR5 — "Add reading" flow                | ✅ done                                                           |
+| Map polish (legend + country pane)      | ✅ done                                                           |
+| LLM verify pass + code-quality refactor | ✅ done (this checkpoint)                                         |
+| PR6 — CSV importer UI                   | ⬜ not started                                                    |
+| PR7 — Multi-user auth                   | ⬜ future                                                         |
+| Future enhancements                     | ⬜ see bottom section                                             |
 
 ## Ubiquitous language (shared glossary)
 
@@ -95,7 +95,10 @@ date range (e.g. "countries I read in 2026"). Single-user, no auth yet. Repo:
 - `Book` (id, title, isbn?, createdAt)
 - `Author` (id, name **unique**, wikidataId?, birthCountryIso3?, resolutionMethod
   [`wikidata`|`openlibrary`|`llm`|`manual`|`unresolved`], confidence?, reasoning?,
-  needsReview, resolvedAt)
+  needsReview, resolvedAt). **Known limitation:** `name` is globally `@unique`, so two
+  real different people sharing an exact name string are currently treated as one
+  Author/nationality — no disambiguation. This also constrains the PR6 dedup design
+  above: author-set matching inherits the same-name-same-author assumption.
 - `AuthorCountry` (authorId, iso3) — `@@id([authorId, iso3])`; the **nationality FK**,
   one author → many countries. This is what the map reads and what manual edits write.
 - `BookAuthor` (bookId, authorId) — co-authored books.
@@ -153,16 +156,28 @@ needed. Manual picks survive the whole loop.
   (LLM couldn't place them): Eunice Hong, Jeffrey Wilson, Evan Winter, Matthew Campbell,
   Tom Wright — set with `db:set -- "Name" ISO3`.
 - The DB holds all 301 CSV books (238 read + 63 unread); **only read books reach the map**.
-  Open decision: whether to make the seed read-only + clean up the 63 unread books and their
-  53 authors (resolved for nothing). Not a bug — the map is correct either way.
+  Decision: **keep** the 63 unread books and their 53 resolved authors as-is (no seed
+  change, no cleanup) — they cost nothing (the map only reads from Readings, so unread
+  books never affect it), and they set up a free future "want to read"/"to-read countries"
+  feature.
 
 ## Remaining work
 
 - **PR6 — CSV importer UI.** Promote the seed script into an upload page: StoryGraph first,
   then Goodreads (needs a Goodreads CSV parser); source tagging; dedup by ISBN/title+date;
   idempotent re-import; import summary.
+  - **Dedup key:** two rows are the same reading if they share
+    `(isbn OR normalizedTitle+authors, dateRead)` — an ISBN match (when present) or a
+    normalized title + author-set match, AND the same read date. Re-imports must be
+    idempotent under this key (a no-op on repeat). Note: author-set matching inherits the
+    `Author.name` uniqueness assumption below (same name = same author).
 - **PR7 — Multi-user auth.** Auth.js (NextAuth); scope all data by `userId`; optional
   shareable public map. Would also motivate the Postgres swap for deploy.
+  - **Data-scoping decision:** `Reading` and `Import` become per-user (add a `userId` FK,
+    scope all reading/import queries by the logged-in user). `Book`, `Author`, and
+    `AuthorCountry` stay **global/shared** — an author's nationality is a universal fact,
+    not user-specific, and resolution (Wikidata/LLM) is expensive, so duplicating it per
+    user has no value. Keeps PR7's schema change small and surgical.
 
 ## Future enhancements (nice-to-haves, unscheduled)
 
