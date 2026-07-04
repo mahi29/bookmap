@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { computeCoverage, type CoverageEntry } from "./coverage";
+import {
+  booksForCountry,
+  computeCoverage,
+  type CoverageEntry,
+  type DetailEntry,
+} from "./coverage";
 
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
 
@@ -60,5 +65,72 @@ describe("computeCoverage (edge cases)", () => {
 
   it("includes undated readings in the all-time view", () => {
     expect(computeCoverage(entries).byCountry.FRA).toBe(1);
+  });
+});
+
+const detail: DetailEntry[] = [
+  {
+    bookId: "b1",
+    iso3: "USA",
+    dateRead: d("2024-03-01"),
+    title: "Book One",
+    author: "Alice",
+  },
+  {
+    bookId: "b1",
+    iso3: "USA",
+    dateRead: d("2024-03-01"),
+    title: "Book One",
+    author: "Bob",
+  },
+  {
+    bookId: "b2",
+    iso3: "USA",
+    dateRead: d("2023-06-01"),
+    title: "Book Two",
+    author: "Carol",
+  },
+  {
+    bookId: "b3",
+    iso3: "USA",
+    dateRead: null,
+    title: "Book Three",
+    author: "Eve",
+  },
+  {
+    bookId: "b4",
+    iso3: "GBR",
+    dateRead: d("2024-07-01"),
+    title: "Book Four",
+    author: "Dan",
+  },
+];
+
+describe("booksForCountry", () => {
+  it("lists a country's distinct books, recent-first with undated last", () => {
+    const books = booksForCountry(detail, "USA");
+    expect(books.map((b) => b.title)).toEqual([
+      "Book One",
+      "Book Two",
+      "Book Three",
+    ]);
+    expect(books[2].dateRead).toBeNull();
+  });
+
+  it("merges co-authors of the same book into one entry", () => {
+    const [bookOne] = booksForCountry(detail, "USA");
+    expect(bookOne.authors).toEqual(["Alice", "Bob"]);
+  });
+
+  it("respects the date range (and drops undated)", () => {
+    const books = booksForCountry(detail, "USA", {
+      from: d("2024-01-01"),
+      to: d("2024-12-31"),
+    });
+    expect(books.map((b) => b.title)).toEqual(["Book One"]);
+  });
+
+  it("returns an empty list for a country with no books", () => {
+    expect(booksForCountry(detail, "FRA")).toEqual([]);
   });
 });

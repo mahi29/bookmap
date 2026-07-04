@@ -12,6 +12,8 @@ const HEIGHT = 480;
 interface Props {
   shapes: CountryShape[];
   byCountry: Record<string, number>;
+  selectedIso3: string | null;
+  onSelect: (iso3: string) => void;
 }
 
 interface Hover {
@@ -30,7 +32,12 @@ function fillFor(count: number, max: number): string {
   return `color-mix(in srgb, var(--accent) ${pct}%, var(--map-empty))`;
 }
 
-export default function Choropleth({ shapes, byCountry }: Props) {
+export default function Choropleth({
+  shapes,
+  byCountry,
+  selectedIso3,
+  onSelect,
+}: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<Hover | null>(null);
 
@@ -64,12 +71,14 @@ export default function Choropleth({ shapes, byCountry }: Props) {
           const d = pathGen(shape.geometry);
           if (!d) return null;
           const count = shape.iso3 ? (byCountry[shape.iso3] ?? 0) : 0;
+          const selected = shape.iso3 != null && shape.iso3 === selectedIso3;
           return (
             <path
               key={shape.iso3 ?? `shape-${i}`}
               d={d}
-              className={styles.country}
+              className={`${styles.country} ${selected ? styles.selected : ""}`}
               style={{ fill: fillFor(count, max) }}
+              onClick={() => shape.iso3 && onSelect(shape.iso3)}
               onMouseMove={(e) => {
                 const rect = wrapRef.current?.getBoundingClientRect();
                 if (!rect) return;

@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { getCoverageEntries } from "@/lib/map-data";
+import { getMapEntries } from "@/lib/map-data";
 import { getCountryShapes } from "@/lib/geo";
 import MapView from "./MapView";
 import styles from "./page.module.css";
 
 export default async function Home() {
-  const entries = await getCoverageEntries();
+  const entries = await getMapEntries();
   const shapes = getCountryShapes();
 
   return (

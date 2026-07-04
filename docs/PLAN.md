@@ -13,31 +13,31 @@ date range (e.g. "countries I read in 2026"). Single-user, no auth yet. Repo:
 
 ## Status at a glance
 
-| Area | State |
-|---|---|
-| PR1 — Scaffold + model + seed | ✅ done |
-| PR2 — Wikidata nationality resolution | ✅ done |
-| PR3 — Choropleth map + period filter | ✅ done |
-| PR4 — LLM fallback + corrections | ✅ done (review **UI** built then replaced by direct DB edits) |
-| Multi-country nationality | ✅ done (mid-course change — authors now hold *all* citizenships) |
-| PR5 — "Add reading" flow | ✅ done |
-| PR6 — CSV importer UI | ⬜ not started |
-| PR7 — Multi-user auth | ⬜ future |
-| Future enhancements | ⬜ see bottom section |
+| Area                                  | State                                                             |
+| ------------------------------------- | ----------------------------------------------------------------- |
+| PR1 — Scaffold + model + seed         | ✅ done                                                           |
+| PR2 — Wikidata nationality resolution | ✅ done                                                           |
+| PR3 — Choropleth map + period filter  | ✅ done                                                           |
+| PR4 — LLM fallback + corrections      | ✅ done (review **UI** built then replaced by direct DB edits)    |
+| Multi-country nationality             | ✅ done (mid-course change — authors now hold _all_ citizenships) |
+| PR5 — "Add reading" flow              | ✅ done                                                           |
+| PR6 — CSV importer UI                 | ⬜ not started                                                    |
+| PR7 — Multi-user auth                 | ⬜ future                                                         |
+| Future enhancements                   | ⬜ see bottom section                                             |
 
 ## Ubiquitous language (shared glossary)
 
 - **User** — a single implicit user (no auth). Schema stays user-scopable for later.
 - **Book** — a title with one or more **Authors**; carries an optional ISBN/UID.
-- **Author** — a person resolved to **one or more** *map countries* (see Nationality).
-- **Reading** — an *event*: "User finished Book on date X." A book read twice = two Readings;
+- **Author** — a person resolved to **one or more** _map countries_ (see Nationality).
+- **Reading** — an _event_: "User finished Book on date X." A book read twice = two Readings;
   Readings carry the date, so all date-range filtering hangs off them.
 - **Nationality / map country** — the set of ISO 3166-1 alpha-3 codes for **all** of an
   author's countries of citizenship. Stored one-row-per-country in `AuthorCountry`.
 - **Coverage** — distinct map countries derived from the Authors of the Books in the User's
   Readings within a date range. Drives the "N countries" counter.
 - **Intensity** — per country, the count of read Books attributable to it. A book counts
-  **once per country**, so a co-authored *or* dual-national book contributes to each of its
+  **once per country**, so a co-authored _or_ dual-national book contributes to each of its
   countries. Drives map shading.
 - **Review queue** — Authors with `needsReview = true` (nothing resolved, or low LLM
   confidence). Corrected by **direct DB edits** (`db:set` or Prisma Studio) — there is no
@@ -48,12 +48,12 @@ date range (e.g. "countries I read in 2026"). Single-user, no auth yet. Repo:
 1. **Deterministic (Wikidata `P27`)** — search the author entity, verify it's a human, read
    every non-deprecated country-of-citizenship claim, and map each to a modern country. We
    keep **all** citizenships (no single-country tiebreak — dual nationals get both). An author
-   is flagged `needsReview` only when *nothing* maps.
+   is flagged `needsReview` only when _nothing_ maps.
 2. **Defunct → successor** — USSR→RUS, Ottoman Empire→TUR, Yugoslavia→SRB, Czechoslovakia→CZE,
    etc., via an in-code lookup (the map renders modern borders). Also handles names/aliases.
 3. **LLM fallback (Claude Opus 4.8)** — only for `needsReview` authors. Given the author name
-   + their book titles, it returns `{ countryIso3s[], confidence, reasoning }` via structured
-   output. Below a confidence threshold it stays in the queue; otherwise it resolves.
+   - their book titles, it returns `{ countryIso3s[], confidence, reasoning }` via structured
+     output. Below a confidence threshold it stays in the queue; otherwise it resolves.
 4. **Manual** — direct DB edits (`db:set`/Prisma Studio) set `resolutionMethod: "manual"`,
    which auto-resolution never clobbers and `db:seed` preserves across re-seeds.
 5. OpenLibrary cross-referencing was **deferred** — Wikidata alone resolves ~80% and the LLM
@@ -110,7 +110,7 @@ date range (e.g. "countries I read in 2026"). Single-user, no auth yet. Repo:
 - `db:seed [csv]` — load a StoryGraph CSV (default `data/storygraph-export.csv`, gitignored).
   Wipes + reloads, but **preserves manual picks**.
 - `db:resolve [--all] [N]` — resolve authors via Wikidata (default: only `unresolved`;
-  `--all` re-resolves everyone *except* manual).
+  `--all` re-resolves everyone _except_ manual).
 - `db:resolve-llm` — Opus 4.8 fallback over the review queue (needs `ANTHROPIC_API_KEY`).
 - `db:set -- "Author Name" ISO3 [ISO3 ...]` — set an author's countries manually (or
   `npx prisma studio` to edit the `AuthorCountry` table directly).
@@ -133,6 +133,8 @@ needed. Manual picks survive the whole loop.
   resolve automatically instead of sitting in review.
 - **PR5** — `/add` form: log a book + date; reuses an existing book for re-reads and resolves
   brand-new authors through Wikidata on submit so the map updates immediately.
+- **Map polish** — a shading legend, and clickable countries that open a sliding right pane
+  listing that country's books (title · authors · read date, most-recent first, range-aware).
 
 ## Remaining work
 
@@ -150,8 +152,6 @@ needed. Manual picks survive the whole loop.
   Title search → pick a result → autofill; ISBN lookup is unambiguous. Fully hands-free entry
   would need barcode/ISBN scanning (browser `BarcodeDetector` + camera). The picked author
   still flows through the existing Wikidata resolution. Manual entry stays as the fallback.
-- **Map polish** — richer tooltips listing the actual books/authors per country; a shading
-  legend; a country-detail panel on click.
 - **Deploy** — swap SQLite → Postgres (Neon) and ship on Vercel.
 - **LLM sweep** — run `db:resolve-llm` over the remaining review queue once an API key is set.
 

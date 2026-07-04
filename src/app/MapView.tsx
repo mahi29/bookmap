@@ -2,19 +2,26 @@
 
 import { useMemo, useState } from "react";
 import type { CountryShape } from "@/lib/geo";
-import { computeCoverage, type CoverageEntry } from "@/lib/coverage";
+import { countryName } from "@/lib/countries";
+import {
+  booksForCountry,
+  computeCoverage,
+  type DetailEntry,
+} from "@/lib/coverage";
 import Choropleth from "./Choropleth";
+import CountryPanel from "./CountryPanel";
 import styles from "./MapView.module.css";
 
 interface Props {
   shapes: CountryShape[];
-  entries: CoverageEntry[];
+  entries: DetailEntry[];
 }
 
 const ALL_TIME = "all";
 
 export default function MapView({ shapes, entries }: Props) {
   const [period, setPeriod] = useState<string>(ALL_TIME);
+  const [selected, setSelected] = useState<string | null>(null);
 
   // Years present in the data, newest first, for the period selector.
   const years = useMemo(() => {
@@ -40,6 +47,18 @@ export default function MapView({ shapes, entries }: Props) {
     [entries, range],
   );
 
+  const detail = useMemo(
+    () =>
+      selected
+        ? {
+            iso3: selected,
+            name: countryName(selected) ?? selected,
+            books: booksForCountry(entries, selected, range),
+          }
+        : null,
+    [selected, entries, range],
+  );
+
   return (
     <section className={styles.panel}>
       <header className={styles.header}>
@@ -63,7 +82,21 @@ export default function MapView({ shapes, entries }: Props) {
           </select>
         </label>
       </header>
-      <Choropleth shapes={shapes} byCountry={byCountry} />
+
+      <div className={styles.legend}>
+        <span className={styles.legendLabel}>Fewer</span>
+        <span className={styles.legendBar} aria-hidden="true" />
+        <span className={styles.legendLabel}>More books</span>
+      </div>
+
+      <Choropleth
+        shapes={shapes}
+        byCountry={byCountry}
+        selectedIso3={selected}
+        onSelect={(iso3) => setSelected((cur) => (cur === iso3 ? null : iso3))}
+      />
+
+      <CountryPanel country={detail} onClose={() => setSelected(null)} />
     </section>
   );
 }

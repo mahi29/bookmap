@@ -14,11 +14,17 @@
   stroke-width: 0.3px;
   transition: fill 0.25s ease;
   outline: none;
+  cursor: pointer;
 }
 
 .country:hover {
   stroke: var(--text);
   stroke-width: 0.8px;
+}
+
+.selected {
+  stroke: var(--text);
+  stroke-width: 1.1px;
 }
 
 .tooltip {

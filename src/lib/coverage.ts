@@ -59,3 +59,62 @@ export function computeCoverage(
     totalBooks: books.size,
   };
 }
+
+/** A coverage entry enriched with book/author labels, for the country detail pane. */
+export interface DetailEntry extends CoverageEntry {
+  title: string;
+  author: string;
+}
+
+export interface CountryBook {
+  bookId: string;
+  title: string;
+  authors: string[];
+  dateRead: Date | null;
+}
+
+/**
+ * The distinct books attributable to a country within a range, most-recently-read first
+ * (undated last). A co-authored book appears once with all of its authors for that country.
+ */
+export function booksForCountry(
+  entries: DetailEntry[],
+  iso3: string,
+  range: DateRange = {},
+): CountryBook[] {
+  const byBook = new Map<string, CountryBook>();
+  for (const entry of entries) {
+    if (entry.iso3 !== iso3) continue;
+    if (!inRange(entry.dateRead, range)) continue;
+
+    const existing = byBook.get(entry.bookId);
+    if (existing) {
+      if (!existing.authors.includes(entry.author))
+        existing.authors.push(entry.author);
+      if (
+        entry.dateRead &&
+        (!existing.dateRead || entry.dateRead > existing.dateRead)
+      ) {
+        existing.dateRead = entry.dateRead; // keep the most recent read date
+      }
+    } else {
+      byBook.set(entry.bookId, {
+        bookId: entry.bookId,
+        title: entry.title,
+        authors: [entry.author],
+        dateRead: entry.dateRead,
+      });
+    }
+  }
+
+  const list = [...byBook.values()];
+  for (const book of list) book.authors.sort();
+  list.sort((a, b) => {
+    if (a.dateRead && b.dateRead)
+      return b.dateRead.getTime() - a.dateRead.getTime();
+    if (a.dateRead) return -1; // dated books before undated
+    if (b.dateRead) return 1;
+    return a.title.localeCompare(b.title);
+  });
+  return list;
+}
