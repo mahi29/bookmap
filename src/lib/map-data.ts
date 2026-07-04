@@ -1,9 +1,10 @@
 import { prisma } from "./db";
 import type { CoverageEntry } from "./coverage";
 
-// Server data access: flatten readings -> books -> resolved author countries into the
-// per-(book, country) entries the aggregation consumes. Only books with a reading and a
-// resolved author country appear (unread books and unresolved authors contribute nothing).
+// Server data access: flatten readings -> books -> each author's map countries into the
+// per-(book, country) entries the aggregation consumes. An author with several
+// citizenships contributes one entry per country; unread books and unresolved authors
+// contribute nothing.
 export async function getCoverageEntries(): Promise<CoverageEntry[]> {
   const readings = await prisma.reading.findMany({
     select: {
@@ -12,7 +13,9 @@ export async function getCoverageEntries(): Promise<CoverageEntry[]> {
       book: {
         select: {
           authors: {
-            select: { author: { select: { resolvedCountryIso3: true } } },
+            select: {
+              author: { select: { countries: { select: { iso3: true } } } },
+            },
           },
         },
       },
@@ -22,10 +25,10 @@ export async function getCoverageEntries(): Promise<CoverageEntry[]> {
   const entries: CoverageEntry[] = [];
   for (const reading of readings) {
     for (const { author } of reading.book.authors) {
-      if (author.resolvedCountryIso3) {
+      for (const { iso3 } of author.countries) {
         entries.push({
           bookId: reading.bookId,
-          iso3: author.resolvedCountryIso3,
+          iso3,
           dateRead: reading.dateRead,
         });
       }

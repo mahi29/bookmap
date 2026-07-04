@@ -17,8 +17,11 @@ async function main() {
   const limitArg = process.argv.find((a) => /^\d+$/.test(a));
   const take = limitArg ? Number(limitArg) : undefined;
 
+  // Never auto-overwrite a manual pick, even with --all.
   const authors = await prisma.author.findMany({
-    where: all ? undefined : { resolutionMethod: "unresolved" },
+    where: all
+      ? { resolutionMethod: { not: "manual" } }
+      : { resolutionMethod: "unresolved" },
     orderBy: { name: "asc" },
     take,
   });
@@ -33,16 +36,19 @@ async function main() {
       await prisma.author.update({
         where: { id: author.id },
         data: {
-          resolvedCountryIso3: r.iso3,
           resolutionMethod: r.method,
           confidence: r.confidence,
           reasoning: r.reasoning,
           needsReview: r.needsReview,
           wikidataId: r.wikidataId,
           resolvedAt: new Date(),
+          countries: {
+            deleteMany: {},
+            create: r.iso3s.map((iso3) => ({ iso3 })),
+          },
         },
       });
-      if (r.iso3 && !r.needsReview) resolved += 1;
+      if (r.iso3s.length > 0 && !r.needsReview) resolved += 1;
       if (r.needsReview) review += 1;
     } catch (error) {
       console.warn(`  ! ${author.name}: ${(error as Error).message}`);

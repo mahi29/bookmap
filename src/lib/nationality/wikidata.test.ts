@@ -78,9 +78,9 @@ describe("resolveAuthorNationality", () => {
     return { ok: true, status: 200, json: async () => body } as Response;
   }) as unknown as typeof fetch;
 
-  it("resolves an author to a single map country end to end", async () => {
+  it("resolves an author to their map country/countries end to end", async () => {
     const result = await resolveAuthorNationality("Douglas Adams", stubFetch);
-    expect(result.iso3).toBe("GBR");
+    expect(result.iso3s).toEqual(["GBR"]);
     expect(result.wikidataId).toBe("Q42");
     expect(result.needsReview).toBe(false);
     expect(result.method).toBe("wikidata");
@@ -94,7 +94,7 @@ describe("resolveAuthorNationality", () => {
         json: async () => ({ search: [] }),
       }) as Response) as unknown as typeof fetch;
     const result = await resolveAuthorNationality("Nobody At All", emptyFetch);
-    expect(result.iso3).toBeNull();
+    expect(result.iso3s).toEqual([]);
     expect(result.needsReview).toBe(true);
     expect(result.method).toBe("unresolved");
   });

@@ -8,74 +8,56 @@ const cit = (
 ): RawCitizenship => ({ label, isoAlpha3, rank });
 
 describe("chooseMapCountry", () => {
-  it("resolves a single citizenship with high confidence", () => {
-    const result = chooseMapCountry([cit("United States", "USA", "preferred")]);
-    expect(result.iso3).toBe("USA");
+  it("returns a single citizenship", () => {
+    const result = chooseMapCountry([cit("United States", "USA")]);
+    expect(result.iso3s).toEqual(["USA"]);
     expect(result.needsReview).toBe(false);
     expect(result.method).toBe("wikidata");
-    expect(result.confidence).toBeGreaterThan(0.9);
   });
 
-  it("resolves a single normal-rank citizenship with lower confidence", () => {
-    const result = chooseMapCountry([cit("France", "FRA")]);
-    expect(result.iso3).toBe("FRA");
+  it("keeps ALL citizenships for a dual national", () => {
+    const result = chooseMapCountry([
+      cit("Japan", "JPN"),
+      cit("United Kingdom", "GBR"),
+    ]);
+    expect(result.iso3s.sort()).toEqual(["GBR", "JPN"]);
     expect(result.needsReview).toBe(false);
-    expect(result.confidence).toBeGreaterThan(0.7);
-    expect(result.confidence).toBeLessThan(0.95);
   });
 
-  it("collapses label variants that map to the same country", () => {
+  it("dedupes label variants that map to the same country", () => {
     const result = chooseMapCountry([
       cit("United States", "USA"),
       cit("United States of America", null),
     ]);
-    expect(result.iso3).toBe("USA");
-    expect(result.needsReview).toBe(false);
+    expect(result.iso3s).toEqual(["USA"]);
   });
 
-  it("prefers preferred-rank citizenship over normal ones", () => {
+  it("maps defunct countries to their modern successors", () => {
     const result = chooseMapCountry([
-      cit("United Kingdom", "GBR", "normal"),
-      cit("United States", "USA", "preferred"),
+      cit("Soviet Union", null),
+      cit("Czechoslovakia", null),
     ]);
-    expect(result.iso3).toBe("USA");
-    expect(result.needsReview).toBe(false);
-  });
-
-  it("maps a defunct country to its modern successor", () => {
-    const result = chooseMapCountry([cit("Soviet Union", null, "preferred")]);
-    expect(result.iso3).toBe("RUS");
-    expect(result.needsReview).toBe(false);
+    expect(result.iso3s.sort()).toEqual(["CZE", "RUS"]);
   });
 
   it("ignores deprecated-rank citizenships", () => {
     const result = chooseMapCountry([
       cit("United States", "USA", "deprecated"),
-      cit("France", "FRA", "normal"),
+      cit("France", "FRA"),
     ]);
-    expect(result.iso3).toBe("FRA");
-  });
-
-  it("flags genuinely ambiguous multi-citizenship for review", () => {
-    const result = chooseMapCountry([
-      cit("United States", "USA"),
-      cit("United Kingdom", "GBR"),
-    ]);
-    expect(result.iso3).toBeNull();
-    expect(result.needsReview).toBe(true);
-    expect(result.confidence).toBeLessThan(0.5);
+    expect(result.iso3s).toEqual(["FRA"]);
   });
 
   it("returns unresolved when there is no citizenship data", () => {
     const result = chooseMapCountry([]);
-    expect(result.iso3).toBeNull();
+    expect(result.iso3s).toEqual([]);
     expect(result.method).toBe("unresolved");
     expect(result.needsReview).toBe(true);
   });
 
-  it("returns unresolved when the citizenship cannot be mapped", () => {
+  it("returns unresolved when no citizenship can be mapped", () => {
     const result = chooseMapCountry([cit("Narnia", null)]);
-    expect(result.iso3).toBeNull();
+    expect(result.iso3s).toEqual([]);
     expect(result.method).toBe("unresolved");
     expect(result.needsReview).toBe(true);
   });

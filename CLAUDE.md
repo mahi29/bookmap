@@ -10,13 +10,14 @@ for now (no auth). See the full plan and ubiquitous language in
 ## Ubiquitous language
 
 - **Book** — a title with one or more Authors.
-- **Author** — resolved to exactly **one** _map country_ (ISO 3166-1 alpha-3), defined as
-  country of citizenship.
+- **Author** — resolved to **one or more** _map countries_ (ISO 3166-1 alpha-3), = all of
+  the author's countries of citizenship (dual nationals count for each).
 - **Reading** — an event: "user finished Book on date X." Carries the date; all date-range
   filtering hangs off Readings.
 - **Coverage** — distinct map countries in the user's Readings for a date range.
-- **Intensity** — count of books attributable to a country (drives map shading).
-- **Review queue** — authors whose country couldn't be resolved confidently.
+- **Intensity** — count of books attributable to a country (drives map shading). A book
+  counts once per country, so a co-authored or dual-national book contributes to each.
+- **Review queue** — authors whose country/countries couldn't be resolved confidently.
 
 ## Engineering conventions (non-negotiable)
 

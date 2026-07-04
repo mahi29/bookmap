@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { allMapCountries } from "@/lib/countries";
 import { getReviewQueue } from "@/lib/review";
-import { saveAuthorCountry } from "./actions";
+import { saveAuthorCountries } from "./actions";
 import ReviewRow from "./ReviewRow";
 import styles from "./page.module.css";
 
@@ -35,7 +35,7 @@ export default async function ReviewPage() {
               key={author.id}
               author={author}
               countries={countries}
-              onSave={saveAuthorCountry}
+              onSave={saveAuthorCountries}
             />
           ))}
         </ul>

@@ -48,15 +48,18 @@ async function main() {
     await prisma.author.update({
       where: { id: author.id },
       data: {
-        resolvedCountryIso3: r.iso3,
         resolutionMethod: r.method,
         confidence: r.confidence,
         reasoning: r.reasoning,
         needsReview: r.needsReview,
         resolvedAt: new Date(),
+        countries: {
+          deleteMany: {},
+          create: r.iso3s.map((iso3) => ({ iso3 })),
+        },
       },
     });
-    if (r.iso3 && !r.needsReview) resolved += 1;
+    if (r.iso3s.length > 0 && !r.needsReview) resolved += 1;
 
     if ((i + 1) % 10 === 0) console.log(`  ...${i + 1}/${authors.length}`);
     await sleep(DELAY_MS);

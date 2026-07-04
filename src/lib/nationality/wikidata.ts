@@ -135,7 +135,7 @@ export async function resolveAuthorNationality(
 ): Promise<AuthorResolution> {
   const hits = await searchEntities(name, fetchFn);
   const unresolved = (reasoning: string): AuthorResolution => ({
-    iso3: null,
+    iso3s: [],
     method: "unresolved",
     confidence: 0,
     reasoning,
