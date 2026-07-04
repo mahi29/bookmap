@@ -18,88 +18,107 @@ async function main() {
   const csv = readFileSync(path, "utf8");
   const books = parseStoryGraphCsv(csv);
 
-  // Preserve manual nationality picks (keyed by author name) across the reset, so
-  // hand-corrected authors survive a re-seed. Everything else is re-derived.
-  const manualPicks = await prisma.author.findMany({
-    where: { resolutionMethod: ResolutionMethod.Manual },
-    select: {
-      name: true,
-      confidence: true,
-      reasoning: true,
-      countries: { select: { iso3: true } },
-    },
-  });
-
-  // Reset in FK-safe order.
-  await prisma.reading.deleteMany();
-  await prisma.bookAuthor.deleteMany();
-  await prisma.book.deleteMany();
-  await prisma.author.deleteMany();
-  await prisma.import.deleteMany();
-
-  const importRecord = await prisma.import.create({
-    data: {
-      source: "storygraph",
-      filename: path.split("/").pop() ?? path,
-      rowCount: books.length,
-    },
-  });
-
-  // Cache authors by name so co-authored books reuse the same Author row.
-  const authorIds = new Map<string, string>();
-  async function authorId(name: string): Promise<string> {
-    const cached = authorIds.get(name);
-    if (cached) return cached;
-    const author = await prisma.author.upsert({
-      where: { name },
-      create: { name },
-      update: {},
-    });
-    authorIds.set(name, author.id);
-    return author.id;
-  }
-
-  let readingCount = 0;
-  for (const book of books) {
-    const created = await prisma.book.create({
-      data: { title: book.title, isbn: book.isbn },
-    });
-
-    // A book can list the same author twice in the export; dedupe per book.
-    for (const name of new Set(book.authors)) {
-      await prisma.bookAuthor.create({
-        data: { bookId: created.id, authorId: await authorId(name) },
-      });
-    }
-
-    for (const reading of book.readings) {
-      await prisma.reading.create({
-        data: {
-          bookId: created.id,
-          dateRead: reading.dateRead,
-          dateStarted: reading.dateStarted,
-          rating: reading.rating,
-          source: ReadingSource.StoryGraph,
-          importId: importRecord.id,
-          rawRow: JSON.stringify(book.raw),
+  // Reset + reload + restore run as one transaction: if anything throws mid-way (a bad
+  // CSV row, a SQLite lock, Ctrl-C), the DB is rolled back to exactly its pre-seed state
+  // instead of being left half-populated with manual picks gone. Every write below goes
+  // through `tx`, never the module-level `prisma`, so nothing escapes the transaction.
+  const { authorIds, readingCount, restored } = await prisma.$transaction(
+    async (tx) => {
+      // Preserve manual nationality picks (keyed by author name) across the reset, so
+      // hand-corrected authors survive a re-seed. Everything else is re-derived.
+      const manualPicks = await tx.author.findMany({
+        where: { resolutionMethod: ResolutionMethod.Manual },
+        select: {
+          name: true,
+          confidence: true,
+          reasoning: true,
+          countries: { select: { iso3: true } },
         },
       });
-      readingCount += 1;
-    }
-  }
 
-  // Re-apply preserved manual picks to any author still present in the new data.
-  let restored = 0;
-  for (const pick of manualPicks) {
-    const id = authorIds.get(pick.name);
-    if (!id) continue; // author no longer in the library
-    await setManualCountries(
-      id,
-      pick.countries.map((c) => c.iso3),
-      { confidence: pick.confidence, reasoning: pick.reasoning },
-    );
-    restored += 1;
-  }
+      // Reset in FK-safe order.
+      await tx.reading.deleteMany();
+      await tx.bookAuthor.deleteMany();
+      await tx.book.deleteMany();
+      await tx.author.deleteMany();
+      await tx.import.deleteMany();
+
+      const importRecord = await tx.import.create({
+        data: {
+          source: "storygraph",
+          filename: path.split("/").pop() ?? path,
+          rowCount: books.length,
+        },
+      });
+
+      // Cache authors by name so co-authored books reuse the same Author row.
+      const authorIds = new Map<string, string>();
+      async function authorId(name: string): Promise<string> {
+        const cached = authorIds.get(name);
+        if (cached) return cached;
+        const author = await tx.author.upsert({
+          where: { name },
+          create: { name },
+          update: {},
+        });
+        authorIds.set(name, author.id);
+        return author.id;
+      }
+
+      // Row-by-row create()s (not createMany) because each book needs its generated id
+      // for the BookAuthor/Reading rows that follow it; batching would need pre-generated
+      // cuids threaded through instead. Left as a perf opportunity (not correctness) if
+      // this ever gets slow — see docs/REVIEW.md B3.
+      let readingCount = 0;
+      for (const book of books) {
+        const created = await tx.book.create({
+          data: { title: book.title, isbn: book.isbn },
+        });
+
+        // A book can list the same author twice in the export; dedupe per book.
+        for (const name of new Set(book.authors)) {
+          await tx.bookAuthor.create({
+            data: { bookId: created.id, authorId: await authorId(name) },
+          });
+        }
+
+        for (const reading of book.readings) {
+          await tx.reading.create({
+            data: {
+              bookId: created.id,
+              dateRead: reading.dateRead,
+              dateStarted: reading.dateStarted,
+              rating: reading.rating,
+              source: ReadingSource.StoryGraph,
+              importId: importRecord.id,
+              rawRow: JSON.stringify(book.raw),
+            },
+          });
+          readingCount += 1;
+        }
+      }
+
+      // Re-apply preserved manual picks to any author still present in the new data.
+      let restored = 0;
+      for (const pick of manualPicks) {
+        const id = authorIds.get(pick.name);
+        if (!id) continue; // author no longer in the library
+        await setManualCountries(
+          id,
+          pick.countries.map((c) => c.iso3),
+          { confidence: pick.confidence, reasoning: pick.reasoning },
+          tx,
+        );
+        restored += 1;
+      }
+
+      return { authorIds, readingCount, restored };
+    },
+    // Generous timeout: this loop is ~3 sequential statements per book (create + N
+    // authors + N readings), so a large library can run long past Prisma's 5s default
+    // even on fast local SQLite. Bump it rather than risk a spurious rollback.
+    { timeout: 60_000 },
+  );
 
   console.log(
     `Seeded ${books.length} books, ${authorIds.size} authors, ${readingCount} readings ` +

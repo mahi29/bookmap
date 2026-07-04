@@ -1,3 +1,4 @@
+import type { Prisma } from "@/generated/prisma/client";
 import { ResolutionMethod } from "../constants";
 import { prisma } from "../db";
 import type { ResolutionResult } from "./resolve";
@@ -6,6 +7,9 @@ import type { ResolutionResult } from "./resolve";
 // (Wikidata, LLM) and the add-reading flow funnel their result through persistResolution,
 // so the mapping from a ResolutionResult to DB columns lives in exactly one spot, and the
 // "manual picks are user truth" invariant is enforced here rather than in each caller.
+
+/** Anything shaped like our Prisma client: the module client, or a `$transaction` callback client. */
+type Db = typeof prisma | Prisma.TransactionClient;
 
 /** Query filter for the authors automated resolution may touch (everything but manual). */
 export const NON_MANUAL = {
@@ -52,13 +56,18 @@ export async function persistResolution(
 /**
  * Set an author's map countries as a manual pick — user truth that automated resolution
  * never overrides. Used by db:set and by the seed's preserve-across-reseed step.
+ *
+ * Accepts an optional `db` client so callers running inside a `prisma.$transaction`
+ * (e.g. the seed script) can pass the transaction client and keep the write atomic
+ * with the rest of their operation.
  */
 export async function setManualCountries(
   authorId: string,
   iso3s: string[],
   opts: { reasoning?: string | null; confidence?: number | null } = {},
+  db: Db = prisma,
 ): Promise<void> {
-  await prisma.author.update({
+  await db.author.update({
     where: { id: authorId },
     data: {
       resolutionMethod: ResolutionMethod.Manual,
