@@ -130,9 +130,18 @@ scale; don't "fix" them.
 
 ## C. Structure
 
-- [ ] **C1. Execute the DDD reorg** (fully specified move plan agreed in review
+- [x] **C1. Execute the DDD reorg** (fully specified move plan agreed in review
       discussion — summarize here for standalone use): 5 commits, `git mv`, tests
       green between each.
+      **Done** (2026-07-05) — all 5 commits landed exactly as specced; `src/lib/` is
+      gone. Along the way, found and fixed a real bug the moves exposed: a test's
+      `vi.mock(...)` path went stale after commit 1, silently stopped intercepting,
+      and `addReading` ran against the live dev database (cleaned up the exact
+      polluted rows) — added a fail-loud guard in `infrastructure/db/prisma.ts` that
+      throws if the real module loads under Vitest, so a stale mock can't silently
+      hit a live DB again. Browser-verified after commit 5 (map, click-to-panel, and
+      the review-queue/undated hints all still work); `db:check` stayed clean
+      throughout.
   1. `src/lib/db.ts` → `src/infrastructure/db/prisma.ts`
   2. Shared kernel: `countries.ts` + `constants.ts` → `src/domains/shared/`
   3. Nationality context: `nationality/{resolve,wikidata,llm}.ts` →
