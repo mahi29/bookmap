@@ -15,6 +15,14 @@ datasource db {
   provider = "postgresql"
 }
 
+/// An account. Readings and Imports are per-user; Books/Authors stay global.
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  passwordHash String // bcrypt; the sentinel "LOCKED" (any non-bcrypt string) never authenticates
+  createdAt    DateTime @default(now())
+}
+
 /// A title with one or more Authors.
 model Book {
   id        String       @id @default(cuid())
