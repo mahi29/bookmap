@@ -17,7 +17,9 @@ for now (no auth). See the full plan and ubiquitous language in
 - **Coverage** — distinct map countries in the user's Readings for a date range.
 - **Intensity** — count of books attributable to a country (drives map shading). A book
   counts once per country, so a co-authored or dual-national book contributes to each.
-- **Review queue** — authors whose country/countries couldn't be resolved confidently.
+- **Review queue** — authors whose country/countries couldn't be resolved confidently
+  (`needsReview`). Corrected out-of-band by editing `data/author-countries.json` and running
+  `npm run db:overrides` — there is no review UI.
 
 ## Engineering conventions (non-negotiable)
 
@@ -49,6 +51,10 @@ for now (no auth). See the full plan and ubiquitous language in
 - `npm run lint` / `npm run format` — ESLint / Prettier.
 - `npm run db:migrate` — create/apply a Prisma migration. `npm run db:generate` — regen client.
 - `npm run db:seed` — populate the DB from a StoryGraph CSV (see `scripts/seed.ts`).
+- `npm run db:resolve` — resolve author nationalities via Wikidata (`--all` re-resolves,
+  skipping manual picks). `npm run db:resolve-llm` — LLM fallback for the review queue.
+- `npm run db:overrides` — apply manual author→country picks from
+  `data/author-countries.json`, then list authors still needing one.
 
 ## Version note
 
