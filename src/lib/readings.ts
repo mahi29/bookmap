@@ -42,7 +42,11 @@ export function normalizeReadingInput(raw: RawReadingInput): NormalizeResult {
     if (!match) return { ok: false, error: "Date must be YYYY-MM-DD." };
     const [, y, m, d] = match;
     dateRead = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
-    if (Number.isNaN(dateRead.getTime()))
+    const rolledOver =
+      dateRead.getUTCFullYear() !== Number(y) ||
+      dateRead.getUTCMonth() !== Number(m) - 1 ||
+      dateRead.getUTCDate() !== Number(d);
+    if (Number.isNaN(dateRead.getTime()) || rolledOver)
       return { ok: false, error: "Invalid date." };
   }
 
@@ -63,10 +67,27 @@ export function normalizeReadingInput(raw: RawReadingInput): NormalizeResult {
 export async function addReading(
   input: ReadingInput,
 ): Promise<{ countries: string[] }> {
-  // Reuse an existing book of the same title (a re-read), else create it.
+  // Reuse an existing book only when both the title AND its author set match (a
+  // re-read) — titles alone collide across unrelated works (e.g. "Hunger" by Knut
+  // Hamsun vs. Roxane Gay), and reusing on title alone would wrongly attribute one
+  // book to both authors' countries.
+  const inputAuthorSet = new Set(input.authors);
+  const candidate = await prisma.book.findFirst({
+    where: { title: input.title },
+    include: { authors: { include: { author: true } } },
+  });
+  const candidateAuthorSet = candidate
+    ? new Set(candidate.authors.map((ba) => ba.author.name))
+    : null;
+  const sameAuthors =
+    candidateAuthorSet !== null &&
+    candidateAuthorSet.size === inputAuthorSet.size &&
+    [...inputAuthorSet].every((name) => candidateAuthorSet.has(name));
+
   const book =
-    (await prisma.book.findFirst({ where: { title: input.title } })) ??
-    (await prisma.book.create({ data: { title: input.title } }));
+    candidate && sameAuthors
+      ? candidate
+      : await prisma.book.create({ data: { title: input.title } });
 
   const countries = new Set<string>();
   for (const name of new Set(input.authors)) {
