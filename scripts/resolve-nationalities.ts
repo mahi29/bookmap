@@ -1,4 +1,4 @@
-import { ResolutionMethod } from "../src/lib/constants";
+import { ResolutionMethod } from "../src/domains/shared/constants";
 import { prisma } from "../src/infrastructure/db/prisma";
 import { NON_MANUAL, persistResolution } from "../src/lib/nationality/persist";
 import { resolveAuthorNationality } from "../src/lib/nationality/wikidata";

@@ -1,5 +1,8 @@
 import { readFileSync } from "node:fs";
-import { ReadingSource, ResolutionMethod } from "../src/lib/constants";
+import {
+  ReadingSource,
+  ResolutionMethod,
+} from "../src/domains/shared/constants";
 import { prisma } from "../src/infrastructure/db/prisma";
 import { setManualCountries } from "../src/lib/nationality/persist";
 import { parseStoryGraphCsv } from "../src/lib/storygraph";

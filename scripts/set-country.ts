@@ -1,4 +1,7 @@
-import { countryName, resolveToMapCountry } from "../src/lib/countries";
+import {
+  countryName,
+  resolveToMapCountry,
+} from "../src/domains/shared/countries";
 import { prisma } from "../src/infrastructure/db/prisma";
 import { setManualCountries } from "../src/lib/nationality/persist";
 import { runScript } from "./shared";

@@ -1,4 +1,4 @@
-import { ResolutionMethod } from "../constants";
+import { ResolutionMethod } from "../../domains/shared/constants";
 import {
   chooseMapCountry,
   type CitizenshipRank,

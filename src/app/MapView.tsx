@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { countryName } from "@/lib/countries";
+import { countryName } from "@/domains/shared/countries";
 import {
   booksForCountry,
   computeCoverage,

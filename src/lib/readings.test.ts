@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ResolutionMethod } from "./constants";
+import { ResolutionMethod } from "../domains/shared/constants";
 
 // --- In-memory fake Prisma, scoped to exactly what addReading touches. ---
 // Bug A2's fix depends on the real relational shape (book -> authors -> author.name),

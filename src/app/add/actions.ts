@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { countryName } from "@/lib/countries";
+import { countryName } from "@/domains/shared/countries";
 import { addReading, normalizeReadingInput } from "@/lib/readings";
 
 export interface AddReadingState {

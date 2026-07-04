@@ -1,4 +1,4 @@
-import { isValidMapCountry } from "../src/lib/countries";
+import { isValidMapCountry } from "../src/domains/shared/countries";
 import { prisma } from "../src/infrastructure/db/prisma";
 import { getCountryShapes } from "../src/lib/geo";
 import { runScript } from "./shared";

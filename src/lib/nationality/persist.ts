@@ -1,5 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
-import { ResolutionMethod } from "../constants";
+import { ResolutionMethod } from "../../domains/shared/constants";
 import { prisma } from "../../infrastructure/db/prisma";
 import type { ResolutionResult } from "./resolve";
 

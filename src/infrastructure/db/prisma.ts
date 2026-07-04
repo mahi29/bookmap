@@ -2,6 +2,19 @@ import { existsSync } from "node:fs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 
+// Fail loud, not silent: if this module is ever loaded for real under Vitest, some
+// test's vi.mock(...) for it isn't intercepting (e.g. a path gone stale after a file
+// move) — the test would otherwise fall through to running real queries against a live
+// database instead of the fake. Crash immediately with a clear cause rather than let
+// that happen quietly. VITEST is set automatically by the test runner.
+if (process.env.VITEST) {
+  throw new Error(
+    "src/infrastructure/db/prisma was imported for real during a Vitest run — a test's " +
+      "vi.mock(...) for this module isn't matching (check the mocked path is still " +
+      "correct). Fix the mock; don't let tests hit a live database.",
+  );
+}
+
 // Prisma 7's engine-free client takes a driver adapter instead of a datasource url.
 // Postgres (Neon) for both dev and prod: DATABASE_URL selects the branch/database per
 // environment (no local-file fallback — there's no sane default connection string).
