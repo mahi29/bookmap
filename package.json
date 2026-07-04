@@ -14,9 +14,11 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:seed": "tsx scripts/seed.ts",
-    "db:resolve": "tsx scripts/resolve-nationalities.ts"
+    "db:resolve": "tsx scripts/resolve-nationalities.ts",
+    "db:resolve-llm": "tsx scripts/resolve-llm.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
     "@prisma/adapter-better-sqlite3": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "better-sqlite3": "^12.11.1",
