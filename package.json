@@ -18,6 +18,7 @@
     "db:resolve-llm": "tsx scripts/resolve-llm.ts",
     "db:verify-llm": "tsx scripts/verify-llm.ts",
     "db:set": "tsx scripts/set-country.ts",
+    "db:set-password": "tsx scripts/set-password.ts",
     "db:check": "tsx scripts/check.ts"
   },
   "dependencies": {

@@ -8,16 +8,34 @@ import { setManualCountries } from "../src/infrastructure/db/prisma-author-resol
 import { parseStoryGraphCsv } from "../src/domains/reading-log/storygraph-import";
 import { runScript } from "./shared";
 
-// Seed the DB from a StoryGraph CSV export. This is a dev convenience for single-user
-// BookMap: it CLEARS existing data and reloads, so it stays idempotent across runs.
-// (A real, dedup-aware importer arrives in a later PR.)
+// Seed the DB from a StoryGraph CSV export. This is a DEV-ONLY convenience: it CLEARS
+// existing data — every user's readings and imports — and reloads the CSV as one user's
+// library, so it stays idempotent across runs. (A real, dedup-aware importer arrives
+// in a later PR.)
 //
-//   npm run db:seed [path/to/export.csv]   (defaults to data/storygraph-export.csv)
+//   npm run db:seed [path/to/export.csv] [-- --user <username>]
+//
+// Defaults: data/storygraph-export.csv, user "mahith". The user is created if missing,
+// with the LOCKED sentinel hash (claim it via `npm run db:set-password`).
 
 const DEFAULT_CSV = "data/storygraph-export.csv";
+const DEFAULT_USERNAME = "mahith";
+
+function parseArgs(argv: string[]): { path: string; username: string } {
+  const args = [...argv];
+  let username = DEFAULT_USERNAME;
+  const userFlag = args.indexOf("--user");
+  if (userFlag !== -1) {
+    const value = args[userFlag + 1];
+    if (!value) throw new Error("--user requires a username.");
+    username = value;
+    args.splice(userFlag, 2);
+  }
+  return { path: args[0] ?? DEFAULT_CSV, username };
+}
 
 async function main() {
-  const path = process.argv[2] ?? DEFAULT_CSV;
+  const { path, username } = parseArgs(process.argv.slice(2));
   const csv = readFileSync(path, "utf8");
   const books = parseStoryGraphCsv(csv);
 
@@ -39,15 +57,23 @@ async function main() {
         },
       });
 
-      // Reset in FK-safe order.
+      // Reset in FK-safe order. (Users survive the reset; only their data is wiped.)
       await tx.reading.deleteMany();
       await tx.bookAuthor.deleteMany();
       await tx.book.deleteMany();
       await tx.author.deleteMany();
       await tx.import.deleteMany();
 
+      // The user owning the seeded library; created LOCKED (no login) if missing.
+      const user = await tx.user.upsert({
+        where: { username },
+        create: { username, passwordHash: "LOCKED" },
+        update: {},
+      });
+
       const importRecord = await tx.import.create({
         data: {
+          userId: user.id,
           source: "storygraph",
           filename: path.split("/").pop() ?? path,
           rowCount: books.length,
@@ -88,6 +114,7 @@ async function main() {
         for (const reading of book.readings) {
           await tx.reading.create({
             data: {
+              userId: user.id,
               bookId: created.id,
               dateRead: reading.dateRead,
               dateStarted: reading.dateStarted,
@@ -125,7 +152,7 @@ async function main() {
 
   console.log(
     `Seeded ${books.length} books, ${authorIds.size} authors, ${readingCount} readings ` +
-      `from ${path} (restored ${restored} manual pick(s)).`,
+      `for ${username} from ${path} (restored ${restored} manual pick(s)).`,
   );
 }
 

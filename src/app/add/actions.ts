@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { countryName } from "@/domains/shared/countries";
 import { normalizeReadingInput } from "@/domains/reading-log/normalize-reading";
 import { addReading } from "@/domains/reading-log/reading-service";
+import { verifySession } from "@/infrastructure/auth/dal";
 
 export interface AddReadingState {
   ok: boolean;
@@ -16,6 +17,9 @@ export async function createReading(
   _prev: AddReadingState,
   formData: FormData,
 ): Promise<AddReadingState> {
+  // The real auth check (the proxy redirect is only optimistic).
+  const session = await verifySession();
+
   const parsed = normalizeReadingInput({
     title: String(formData.get("title") ?? ""),
     authors: String(formData.get("authors") ?? ""),
@@ -27,7 +31,7 @@ export async function createReading(
     return { ok: false, message: parsed.error };
   }
 
-  const { countries } = await addReading(parsed.value);
+  const { countries } = await addReading(parsed.value, session.userId);
   revalidatePath("/");
 
   const where =

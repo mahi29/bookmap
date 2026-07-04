@@ -20,7 +20,9 @@ model User {
   id           String    @id @default(cuid())
   username     String    @unique
   passwordHash String // bcrypt; the sentinel "LOCKED" (any non-bcrypt string) never authenticates
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
+  readings     Reading[]
+  imports      Import[]
 }
 
 /// A title with one or more Authors.
@@ -65,11 +67,14 @@ model BookAuthor {
   author   Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@id([bookId, authorId])
+  @@index([authorId])
 }
 
 /// A read event: "user finished Book on date X." Carries the dates for range filtering.
 model Reading {
   id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   bookId      String
   book        Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
   dateRead    DateTime? // finish date; null = undated (all-time only, excluded from ranges)
@@ -80,11 +85,16 @@ model Reading {
   import      Import?   @relation(fields: [importId], references: [id], onDelete: SetNull)
   rawRow      String? // JSON-stringified original source row, for debugging/re-parsing
   createdAt   DateTime  @default(now())
+
+  @@index([bookId])
+  @@index([userId, dateRead])
 }
 
 /// One CSV import run, tracked for dedup/idempotency.
 model Import {
   id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   source     String // storygraph | goodreads
   filename   String
   rowCount   Int

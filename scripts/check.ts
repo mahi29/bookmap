@@ -106,6 +106,21 @@ async function main() {
     );
   }
 
+  // (e) Visibility: per-user readings/imports (orphans are impossible under the FK).
+  const users = await prisma.user.findMany({
+    select: {
+      username: true,
+      _count: { select: { readings: true, imports: true } },
+    },
+    orderBy: { username: "asc" },
+  });
+  console.log("\nPer-user data:");
+  for (const user of users) {
+    console.log(
+      `  ${user.username}: ${user._count.readings} reading(s), ${user._count.imports} import(s)`,
+    );
+  }
+
   console.log(ok ? "\nAll checks passed." : "\nSome checks failed.");
   if (!ok) process.exitCode = 1;
 }

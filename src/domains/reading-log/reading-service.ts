@@ -8,9 +8,10 @@ import type { ReadingInput } from "./normalize-reading";
 // needed and resolving any brand-new authors through the same Wikidata pipeline the
 // seed uses. See normalize-reading.ts for the pure input validation this consumes.
 
-/** Persist a reading, creating the book/authors as needed and resolving new authors. */
+/** Persist a reading for a user, creating the book/authors as needed and resolving new authors. */
 export async function addReading(
   input: ReadingInput,
+  userId: string,
 ): Promise<{ countries: string[] }> {
   // Reuse an existing book only when both the title AND its author set match (a
   // re-read) — titles alone collide across unrelated works (e.g. "Hunger" by Knut
@@ -68,6 +69,7 @@ export async function addReading(
 
   await prisma.reading.create({
     data: {
+      userId,
       bookId: book.id,
       dateRead: input.dateRead,
       rating: input.rating,

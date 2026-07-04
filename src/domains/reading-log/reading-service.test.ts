@@ -40,6 +40,7 @@ interface BookAuthorUpsertArgs {
 }
 interface ReadingCreateArgs {
   data: {
+    userId: string;
     bookId: string;
     dateRead: Date | null;
     rating: number | null;
@@ -50,12 +51,14 @@ interface ReadingCreateArgs {
 let books: FakeBook[];
 let authors: FakeAuthor[];
 let bookAuthors: FakeBookAuthor[];
+let readings: (ReadingCreateArgs["data"] & { id: string })[];
 let nextId: number;
 
 function resetFakeDb() {
   books = [];
   authors = [];
   bookAuthors = [];
+  readings = [];
   nextId = 1;
 }
 
@@ -122,10 +125,11 @@ vi.mock("../../infrastructure/db/prisma", () => ({
       }),
     },
     reading: {
-      create: vi.fn(async ({ data }: ReadingCreateArgs) => ({
-        id: genId("reading"),
-        ...data,
-      })),
+      create: vi.fn(async ({ data }: ReadingCreateArgs) => {
+        const reading = { id: genId("reading"), ...data };
+        readings.push(reading);
+        return reading;
+      }),
     },
   },
 }));
@@ -159,7 +163,7 @@ describe("addReading", () => {
     });
     expect(first.ok).toBe(true);
     if (!first.ok) return;
-    await addReading(first.value);
+    await addReading(first.value, "user1");
 
     expect(books).toHaveLength(1);
     const originalBookId = books[0].id;
@@ -171,7 +175,7 @@ describe("addReading", () => {
     });
     expect(second.ok).toBe(true);
     if (!second.ok) return;
-    await addReading(second.value);
+    await addReading(second.value, "user1");
 
     // A new Book row must be created — not the Hamsun book reused.
     expect(books).toHaveLength(2);
@@ -195,7 +199,7 @@ describe("addReading", () => {
     });
     expect(first.ok).toBe(true);
     if (!first.ok) return;
-    await addReading(first.value);
+    await addReading(first.value, "user1");
     expect(books).toHaveLength(1);
 
     const second = normalizeReadingInput({
@@ -204,9 +208,22 @@ describe("addReading", () => {
     });
     expect(second.ok).toBe(true);
     if (!second.ok) return;
-    await addReading(second.value);
+    await addReading(second.value, "user1");
 
     // Same book reused, not a duplicate.
     expect(books).toHaveLength(1);
+  });
+
+  it("stores the reading against the given user", async () => {
+    const input = normalizeReadingInput({
+      title: "Homegoing",
+      authors: "Yaa Gyasi",
+    });
+    expect(input.ok).toBe(true);
+    if (!input.ok) return;
+    await addReading(input.value, "user42");
+
+    expect(readings).toHaveLength(1);
+    expect(readings[0].userId).toBe("user42");
   });
 });
