@@ -18,8 +18,9 @@ for now (no auth). See the full plan and ubiquitous language in
 - **Intensity** — count of books attributable to a country (drives map shading). A book
   counts once per country, so a co-authored or dual-national book contributes to each.
 - **Review queue** — authors whose country/countries couldn't be resolved confidently
-  (`needsReview`). Corrected out-of-band by editing `data/author-countries.json` and running
-  `npm run db:overrides` — there is no review UI.
+  (`needsReview`). Corrected by editing the DB directly (`npx prisma studio`, or
+  `npm run db:set -- "Name" ISO3 ...`); there is no review UI. Manual picks survive a
+  re-seed.
 
 ## Engineering conventions (non-negotiable)
 
@@ -53,8 +54,8 @@ for now (no auth). See the full plan and ubiquitous language in
 - `npm run db:seed` — populate the DB from a StoryGraph CSV (see `scripts/seed.ts`).
 - `npm run db:resolve` — resolve author nationalities via Wikidata (`--all` re-resolves,
   skipping manual picks). `npm run db:resolve-llm` — LLM fallback for the review queue.
-- `npm run db:overrides` — apply manual author→country picks from
-  `data/author-countries.json`, then list authors still needing one.
+- `npm run db:set -- "Author Name" ISO3 [ISO3 ...]` — manually set an author's map
+  country/countries (or use `npx prisma studio` to edit the `AuthorCountry` table directly).
 
 ## Version note
 

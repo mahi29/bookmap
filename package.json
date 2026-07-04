@@ -16,7 +16,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:resolve": "tsx scripts/resolve-nationalities.ts",
     "db:resolve-llm": "tsx scripts/resolve-llm.ts",
-    "db:overrides": "tsx scripts/apply-overrides.ts"
+    "db:set": "tsx scripts/set-country.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

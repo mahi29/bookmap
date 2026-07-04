@@ -15,6 +15,18 @@ async function main() {
   const csv = readFileSync(path, "utf8");
   const books = parseStoryGraphCsv(csv);
 
+  // Preserve manual nationality picks (keyed by author name) across the reset, so
+  // hand-corrected authors survive a re-seed. Everything else is re-derived.
+  const manualPicks = await prisma.author.findMany({
+    where: { resolutionMethod: "manual" },
+    select: {
+      name: true,
+      confidence: true,
+      reasoning: true,
+      countries: { select: { iso3: true } },
+    },
+  });
+
   // Reset in FK-safe order.
   await prisma.reading.deleteMany();
   await prisma.bookAuthor.deleteMany();
@@ -73,8 +85,31 @@ async function main() {
     }
   }
 
+  // Re-apply preserved manual picks to any author still present in the new data.
+  let restored = 0;
+  for (const pick of manualPicks) {
+    const id = authorIds.get(pick.name);
+    if (!id) continue; // author no longer in the library
+    await prisma.author.update({
+      where: { id },
+      data: {
+        resolutionMethod: "manual",
+        needsReview: false,
+        confidence: pick.confidence ?? 1,
+        reasoning: pick.reasoning,
+        resolvedAt: new Date(),
+        countries: {
+          deleteMany: {},
+          create: pick.countries.map((c) => ({ iso3: c.iso3 })),
+        },
+      },
+    });
+    restored += 1;
+  }
+
   console.log(
-    `Seeded ${books.length} books, ${authorIds.size} authors, ${readingCount} readings from ${path}`,
+    `Seeded ${books.length} books, ${authorIds.size} authors, ${readingCount} readings ` +
+      `from ${path} (restored ${restored} manual pick(s)).`,
   );
 }
 
