@@ -1,4 +1,7 @@
+import { ResolutionMethod } from "../constants";
 import { countryName, resolveToMapCountry } from "../countries";
+
+export type { ResolutionMethod };
 
 // Pure mapping: given the citizenship claims scraped from a structured source (Wikidata
 // P27), map them to the set of modern map countries an author belongs to. Authors can
@@ -15,9 +18,6 @@ export interface RawCitizenship {
   rank: CitizenshipRank;
 }
 
-export type ResolutionMethod =
-  "wikidata" | "openlibrary" | "llm" | "manual" | "unresolved";
-
 export interface ResolutionResult {
   /** Every modern map country the author belongs to (may be empty). */
   iso3s: string[];
@@ -30,7 +30,7 @@ export interface ResolutionResult {
 function unresolved(reasoning: string): ResolutionResult {
   return {
     iso3s: [],
-    method: "unresolved",
+    method: ResolutionMethod.Unresolved,
     confidence: 0,
     reasoning,
     needsReview: true,
@@ -40,7 +40,7 @@ function unresolved(reasoning: string): ResolutionResult {
 /** Map a source's citizenship claims to the set of modern map countries. */
 export function chooseMapCountry(
   citizenships: RawCitizenship[],
-  source: ResolutionMethod = "wikidata",
+  source: ResolutionMethod = ResolutionMethod.Wikidata,
 ): ResolutionResult {
   const active = citizenships.filter((c) => c.rank !== "deprecated");
 

@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
-import { parseStoryGraphCsv } from "../src/lib/storygraph";
+import { ReadingSource, ResolutionMethod } from "../src/lib/constants";
 import { prisma } from "../src/lib/db";
+import { setManualCountries } from "../src/lib/nationality/persist";
+import { parseStoryGraphCsv } from "../src/lib/storygraph";
+import { runScript } from "./shared";
 
 // Seed the DB from a StoryGraph CSV export. This is a dev convenience for single-user
 // BookMap: it CLEARS existing data and reloads, so it stays idempotent across runs.
@@ -18,7 +21,7 @@ async function main() {
   // Preserve manual nationality picks (keyed by author name) across the reset, so
   // hand-corrected authors survive a re-seed. Everything else is re-derived.
   const manualPicks = await prisma.author.findMany({
-    where: { resolutionMethod: "manual" },
+    where: { resolutionMethod: ResolutionMethod.Manual },
     select: {
       name: true,
       confidence: true,
@@ -76,7 +79,7 @@ async function main() {
           dateRead: reading.dateRead,
           dateStarted: reading.dateStarted,
           rating: reading.rating,
-          source: "storygraph",
+          source: ReadingSource.StoryGraph,
           importId: importRecord.id,
           rawRow: JSON.stringify(book.raw),
         },
@@ -90,20 +93,11 @@ async function main() {
   for (const pick of manualPicks) {
     const id = authorIds.get(pick.name);
     if (!id) continue; // author no longer in the library
-    await prisma.author.update({
-      where: { id },
-      data: {
-        resolutionMethod: "manual",
-        needsReview: false,
-        confidence: pick.confidence ?? 1,
-        reasoning: pick.reasoning,
-        resolvedAt: new Date(),
-        countries: {
-          deleteMany: {},
-          create: pick.countries.map((c) => ({ iso3: c.iso3 })),
-        },
-      },
-    });
+    await setManualCountries(
+      id,
+      pick.countries.map((c) => c.iso3),
+      { confidence: pick.confidence, reasoning: pick.reasoning },
+    );
     restored += 1;
   }
 
@@ -113,9 +107,4 @@ async function main() {
   );
 }
 
-main()
-  .catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  })
-  .finally(() => prisma.$disconnect());
+runScript(main);

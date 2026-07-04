@@ -1,4 +1,6 @@
+import { ReadingSource, ResolutionMethod } from "./constants";
 import { prisma } from "./db";
+import { persistResolution } from "./nationality/persist";
 import { resolveAuthorNationality } from "./nationality/wikidata";
 
 // Add-reading domain: normalize form input (pure/tested) and persist a reading, resolving
@@ -84,25 +86,11 @@ export async function addReading(
       select: { resolutionMethod: true, countries: { select: { iso3: true } } },
     });
 
-    if (current?.resolutionMethod === "unresolved") {
+    if (current?.resolutionMethod === ResolutionMethod.Unresolved) {
       // Best-effort: resolve a brand-new author now so the map updates immediately.
       try {
         const r = await resolveAuthorNationality(name);
-        await prisma.author.update({
-          where: { id: author.id },
-          data: {
-            resolutionMethod: r.method,
-            confidence: r.confidence,
-            reasoning: r.reasoning,
-            needsReview: r.needsReview,
-            wikidataId: r.wikidataId,
-            resolvedAt: new Date(),
-            countries: {
-              deleteMany: {},
-              create: r.iso3s.map((iso3) => ({ iso3 })),
-            },
-          },
-        });
+        await persistResolution(author.id, r);
         r.iso3s.forEach((c) => countries.add(c));
       } catch {
         // Leave the author unresolved; it can be resolved later via db:resolve.
@@ -117,7 +105,7 @@ export async function addReading(
       bookId: book.id,
       dateRead: input.dateRead,
       rating: input.rating,
-      source: "manual",
+      source: ReadingSource.Manual,
     },
   });
 

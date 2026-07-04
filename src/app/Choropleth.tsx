@@ -9,6 +9,12 @@ import styles from "./Choropleth.module.css";
 const WIDTH = 960;
 const HEIGHT = 480;
 
+// Shading ramp: a country with 1 book gets MIN_SHADE_PCT of the accent; the most-read
+// country gets MAX_SHADE_PCT. Kept off 0/100 so the lightest shade still reads as "read"
+// and the darkest still shows its border.
+const MIN_SHADE_PCT = 15;
+const MAX_SHADE_PCT = 85;
+
 interface Props {
   shapes: CountryShape[];
   byCountry: Record<string, number>;
@@ -28,7 +34,7 @@ interface Hover {
 function fillFor(count: number, max: number): string {
   if (!count) return "var(--map-empty)";
   const t = Math.sqrt(count) / Math.sqrt(max);
-  const pct = Math.round(15 + 70 * t);
+  const pct = Math.round(MIN_SHADE_PCT + (MAX_SHADE_PCT - MIN_SHADE_PCT) * t);
   return `color-mix(in srgb, var(--accent) ${pct}%, var(--map-empty))`;
 }
 

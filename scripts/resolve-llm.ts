@@ -1,31 +1,18 @@
-import { existsSync } from "node:fs";
-import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "../src/lib/db";
-import {
-  resolveAuthorNationalityLLM,
-  type LlmClient,
-} from "../src/lib/nationality/llm";
-
-// Load ANTHROPIC_API_KEY from a gitignored .env if present.
-if (existsSync(".env")) process.loadEnvFile(".env");
+import { resolveAuthorNationalityLLM } from "../src/lib/nationality/llm";
+import { persistResolution } from "../src/lib/nationality/persist";
+import { createLlmClient, MAX_TITLES, runScript, sleep } from "./shared";
 
 // Second-pass resolution: hand every review-queue author to Claude, using their book
-// titles as context. Requires ANTHROPIC_API_KEY. Confident answers resolve the author
-// (method "llm"); anything uncertain stays in the queue for manual review.
+// titles as context. Confident answers resolve the author (method "llm"); anything
+// uncertain stays in the queue for manual review.
 //
 //   set ANTHROPIC_API_KEY in .env (or the environment), then: npm run db:resolve-llm
 
 const DELAY_MS = 200;
-const MAX_TITLES = 8;
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error(
-      "ANTHROPIC_API_KEY is not set — export it before running db:resolve-llm.",
-    );
-  }
-  const client = new Anthropic() as unknown as LlmClient;
+  const client = createLlmClient();
 
   const authors = await prisma.author.findMany({
     where: { needsReview: true },
@@ -48,21 +35,7 @@ async function main() {
       { name: author.name, bookTitles },
       client,
     );
-
-    await prisma.author.update({
-      where: { id: author.id },
-      data: {
-        resolutionMethod: r.method,
-        confidence: r.confidence,
-        reasoning: r.reasoning,
-        needsReview: r.needsReview,
-        resolvedAt: new Date(),
-        countries: {
-          deleteMany: {},
-          create: r.iso3s.map((iso3) => ({ iso3 })),
-        },
-      },
-    });
+    await persistResolution(author.id, r);
     if (r.iso3s.length > 0 && !r.needsReview) resolved += 1;
 
     if ((i + 1) % 10 === 0) console.log(`  ...${i + 1}/${authors.length}`);
@@ -74,9 +47,4 @@ async function main() {
   );
 }
 
-main()
-  .catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  })
-  .finally(() => prisma.$disconnect());
+runScript(main);

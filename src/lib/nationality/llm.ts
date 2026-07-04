@@ -1,3 +1,4 @@
+import { ResolutionMethod } from "../constants";
 import { countryName, resolveToMapCountry } from "../countries";
 import type { ResolutionResult } from "./resolve";
 
@@ -72,7 +73,7 @@ export function interpretLlmResult(raw: LlmRawResult): ResolutionResult {
   if (iso3s.length > 0 && confidence >= CONFIDENCE_THRESHOLD) {
     return {
       iso3s,
-      method: "llm",
+      method: ResolutionMethod.Llm,
       confidence,
       reasoning: `LLM: ${names} — ${raw.reasoning}`,
       needsReview: false,
@@ -84,7 +85,8 @@ export function interpretLlmResult(raw: LlmRawResult): ResolutionResult {
     iso3s.length > 0 ? `${names} (low confidence ${confidence})` : "no country";
   return {
     iso3s: [],
-    method: iso3s.length > 0 ? "llm" : "unresolved",
+    method:
+      iso3s.length > 0 ? ResolutionMethod.Llm : ResolutionMethod.Unresolved,
     confidence,
     reasoning: `LLM suggested ${guess}: ${raw.reasoning}`,
     needsReview: true,
@@ -127,7 +129,7 @@ export async function resolveAuthorNationalityLLM(
   } catch (error) {
     return {
       iso3s: [],
-      method: "unresolved",
+      method: ResolutionMethod.Unresolved,
       confidence: 0,
       reasoning: `LLM resolution failed: ${(error as Error).message}`,
       needsReview: true,

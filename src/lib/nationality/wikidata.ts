@@ -1,3 +1,4 @@
+import { ResolutionMethod } from "../constants";
 import {
   chooseMapCountry,
   type CitizenshipRank,
@@ -125,9 +126,9 @@ async function getEntities(
 }
 
 /**
- * Resolve an author name to a single map country via Wikidata. Takes the first search
- * hit that is a human with citizenship data; missing/ambiguous results are flagged for
- * review rather than guessed at.
+ * Resolve an author name to their map country/countries via Wikidata. Takes the first
+ * search hit that is a human, and keeps every non-deprecated country of citizenship (dual
+ * nationals get all of them); missing matches are flagged for review rather than guessed at.
  */
 export async function resolveAuthorNationality(
   name: string,
@@ -136,7 +137,7 @@ export async function resolveAuthorNationality(
   const hits = await searchEntities(name, fetchFn);
   const unresolved = (reasoning: string): AuthorResolution => ({
     iso3s: [],
-    method: "unresolved",
+    method: ResolutionMethod.Unresolved,
     confidence: 0,
     reasoning,
     needsReview: true,
@@ -175,7 +176,10 @@ export async function resolveAuthorNationality(
       return { label, isoAlpha3: alpha3, rank: c.rank };
     });
 
-    return { ...chooseMapCountry(raws, "wikidata"), wikidataId: hit.id };
+    return {
+      ...chooseMapCountry(raws, ResolutionMethod.Wikidata),
+      wikidataId: hit.id,
+    };
   }
 
   return unresolved("No matching person found on Wikidata");
