@@ -10,7 +10,22 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+// Neon's connection strings use sslmode=require, which pg-connection-string currently
+// treats as an alias for verify-full (full certificate verification) but warns will
+// follow weaker libpq semantics in the next major version. Pin the current, stronger
+// behavior explicitly so nothing silently weakens on a future dependency bump.
+function withExplicitSslMode(connectionString: string): string {
+  const url = new URL(connectionString);
+  const mode = url.searchParams.get("sslmode");
+  if (mode === "prefer" || mode === "require" || mode === "verify-ca") {
+    url.searchParams.set("sslmode", "verify-full");
+  }
+  return url.toString();
+}
+
+const adapter = new PrismaPg({
+  connectionString: withExplicitSslMode(process.env.DATABASE_URL),
+});
 
 // Reuse a single client across hot reloads in dev to avoid exhausting connections.
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
