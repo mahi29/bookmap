@@ -54,6 +54,9 @@ for now (no auth). See the full plan, status, and ubiquitous language in
 - `npm run db:seed` — populate the DB from a StoryGraph CSV (see `scripts/seed.ts`).
 - `npm run db:resolve` — resolve author nationalities via Wikidata (`--all` re-resolves,
   skipping manual picks). `npm run db:resolve-llm` — LLM fallback for the review queue.
+- `npm run db:resolve-llm` — LLM fallback over the review queue. `npm run db:verify-llm` —
+  LLM check over **all** non-manual authors (catches wrong-but-confident name matches).
+  Both need `ANTHROPIC_API_KEY` (put it in a gitignored `.env`).
 - `npm run db:set -- "Author Name" ISO3 [ISO3 ...]` — manually set an author's map
   country/countries (or use `npx prisma studio` to edit the `AuthorCountry` table directly).
 

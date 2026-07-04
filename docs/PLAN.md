@@ -153,7 +153,10 @@ needed. Manual picks survive the whole loop.
   would need barcode/ISBN scanning (browser `BarcodeDetector` + camera). The picked author
   still flows through the existing Wikidata resolution. Manual entry stays as the fallback.
 - **Deploy** — swap SQLite → Postgres (Neon) and ship on Vercel.
-- **LLM sweep** — run `db:resolve-llm` over the remaining review queue once an API key is set.
+- **LLM sweep** — with `ANTHROPIC_API_KEY` in `.env`: `db:resolve-llm` clears the review
+  queue, and `db:verify-llm` re-checks **all** non-manual authors against their book titles
+  to catch wrong-but-confident Wikidata matches (e.g. a common name that hit the wrong
+  person). Manual picks are never touched.
 
 ## Verification
 

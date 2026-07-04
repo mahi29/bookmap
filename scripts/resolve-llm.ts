@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "../src/lib/db";
 import {
@@ -5,11 +6,14 @@ import {
   type LlmClient,
 } from "../src/lib/nationality/llm";
 
+// Load ANTHROPIC_API_KEY from a gitignored .env if present.
+if (existsSync(".env")) process.loadEnvFile(".env");
+
 // Second-pass resolution: hand every review-queue author to Claude, using their book
 // titles as context. Requires ANTHROPIC_API_KEY. Confident answers resolve the author
 // (method "llm"); anything uncertain stays in the queue for manual review.
 //
-//   ANTHROPIC_API_KEY=sk-ant-... npm run db:resolve-llm
+//   set ANTHROPIC_API_KEY in .env (or the environment), then: npm run db:resolve-llm
 
 const DELAY_MS = 200;
 const MAX_TITLES = 8;

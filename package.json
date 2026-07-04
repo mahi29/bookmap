@@ -16,6 +16,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:resolve": "tsx scripts/resolve-nationalities.ts",
     "db:resolve-llm": "tsx scripts/resolve-llm.ts",
+    "db:verify-llm": "tsx scripts/verify-llm.ts",
     "db:set": "tsx scripts/set-country.ts"
   },
   "dependencies": {
