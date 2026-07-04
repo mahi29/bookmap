@@ -171,18 +171,29 @@ needed. Manual picks survive the whole loop.
   stays **single implicit user, no login** — just running on Postgres/Vercel instead of a
   local SQLite file.
   - **Code done:** schema `datasource` provider → `postgresql`; `src/lib/db.ts` and
-    `prisma.config.ts` use `@prisma/adapter-pg` / `PrismaPg` with `DATABASE_URL` (required,
-    no fallback — see `.env.example`); old SQLite migration history removed (incompatible
-    SQL dialect; a fresh `prisma migrate dev --name init` generates the real one once a
-    Postgres connection exists). One Postgres provider for **both** dev and prod via
-    separate Neon branches, not a dual SQLite-dev/Postgres-prod setup — avoids maintaining
-    two SQL dialects for no real benefit at this scale.
-  - **Needs a human:** create a Neon project (grab a dev-branch connection string for
-    local `.env`, a prod-branch one for Vercel), connect the GitHub repo to a Vercel
-    project, set `DATABASE_URL` there, then run the initial migration against each branch.
-    Existing local data (28 countries, 236 books, manual picks) should be **migrated**, not
-    re-seeded from scratch, to avoid re-paying for LLM resolution and losing corrections
-    already made.
+    `prisma.config.ts` use `@prisma/adapter-pg` / `PrismaPg`. `DATABASE_URL` (pooled, for
+    the running app) and `DIRECT_URL` (unpooled, for `prisma migrate` — PgBouncer's
+    transaction-mode pooling doesn't reliably support the advisory locks migrations need;
+    `prisma.config.ts` falls back to `DATABASE_URL` if `DIRECT_URL` isn't set) — see
+    `.env.example`. Both `db.ts` and `prisma.config.ts` load `.env` themselves (Next.js
+    auto-loads it, but the Prisma CLI and `scripts/*.ts` via `tsx` don't); old SQLite
+    migration history removed (incompatible SQL dialect). Neon's connection strings use
+    `sslmode=require`, normalized in `db.ts` to the explicit `sslmode=verify-full` it's
+    currently an alias for, ahead of a future `pg`/`pg-connection-string` major that
+    changes what that implies. One Postgres provider for **both** dev and prod via
+    separate Neon branches, not a dual SQLite-dev/Postgres-prod setup.
+  - **Done:** Neon `dev` branch created; initial migration applied
+    (`prisma/migrations/20260704191642_init`); existing local data (301 books, 242
+    authors incl. 9 manual picks and the 5-author review queue, 238 readings) migrated
+    from `dev.db` via a one-time export→import script (not committed — scratch tooling,
+    re-creatable the same way for the production branch when ready). Verified via
+    `npm run db:check` (all 4 checks pass) and Preview MCP: 28 countries · 236 books,
+    matching pre-migration exactly.
+  - **Still needs a human:** connect the GitHub repo to a Vercel project (a first deploy
+    already happened — confirmed a working build, static pages generate against
+    `DATABASE_URL` at build time), set `DATABASE_URL`/`DIRECT_URL` there to a **production**
+    Neon branch (separate from `dev`), then repeat the same migration against it so prod
+    isn't re-seeded from scratch either.
   - `ANTHROPIC_API_KEY` is only used by the offline `db:resolve-llm`/`db:verify-llm`
     scripts, run manually against whichever `DATABASE_URL` you point at — it is not needed
     as a Vercel env var for the deployed app.
