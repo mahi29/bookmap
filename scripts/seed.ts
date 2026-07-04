@@ -4,7 +4,7 @@ import {
   ResolutionMethod,
 } from "../src/domains/shared/constants";
 import { prisma } from "../src/infrastructure/db/prisma";
-import { setManualCountries } from "../src/lib/nationality/persist";
+import { setManualCountries } from "../src/infrastructure/db/prisma-author-resolution-repository";
 import { parseStoryGraphCsv } from "../src/lib/storygraph";
 import { runScript } from "./shared";
 

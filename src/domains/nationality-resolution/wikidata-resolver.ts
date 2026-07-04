@@ -1,10 +1,10 @@
-import { ResolutionMethod } from "../../domains/shared/constants";
+import { ResolutionMethod } from "../shared/constants";
 import {
   chooseMapCountry,
   type CitizenshipRank,
   type RawCitizenship,
   type ResolutionResult,
-} from "./resolve";
+} from "./resolve-country";
 
 // I/O layer: look an author up on Wikidata and read their country-of-citizenship (P27)
 // claims. The JSON-shaping helpers are pure and unit-tested; only fetchJson touches the

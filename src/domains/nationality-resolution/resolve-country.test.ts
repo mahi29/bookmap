@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { chooseMapCountry, type RawCitizenship } from "./resolve";
+import { chooseMapCountry, type RawCitizenship } from "./resolve-country";
 
 const cit = (
   label: string,

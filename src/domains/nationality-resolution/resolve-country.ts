@@ -1,8 +1,5 @@
-import { ResolutionMethod } from "../../domains/shared/constants";
-import {
-  countryName,
-  resolveToMapCountry,
-} from "../../domains/shared/countries";
+import { ResolutionMethod } from "../shared/constants";
+import { countryName, resolveToMapCountry } from "../shared/countries";
 
 export type { ResolutionMethod };
 

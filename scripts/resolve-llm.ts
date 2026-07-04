@@ -1,6 +1,6 @@
 import { prisma } from "../src/infrastructure/db/prisma";
-import { resolveAuthorNationalityLLM } from "../src/lib/nationality/llm";
-import { persistResolution } from "../src/lib/nationality/persist";
+import { resolveAuthorNationalityLLM } from "../src/domains/nationality-resolution/llm-resolver";
+import { persistResolution } from "../src/infrastructure/db/prisma-author-resolution-repository";
 import { createLlmClient, MAX_TITLES, runScript, sleep } from "./shared";
 
 // Second-pass resolution: hand every review-queue author to Claude, using their book

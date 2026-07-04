@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "../src/infrastructure/db/prisma";
-import type { LlmClient } from "../src/lib/nationality/llm";
+import type { LlmClient } from "../src/domains/nationality-resolution/llm-resolver";
 
 // Small shared infrastructure for the db:* scripts. Deliberately a couple of functions,
 // not a base-class hierarchy — the scripts are thin orchestration and don't need one.

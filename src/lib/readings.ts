@@ -1,7 +1,7 @@
 import { ReadingSource, ResolutionMethod } from "../domains/shared/constants";
 import { prisma } from "../infrastructure/db/prisma";
-import { persistResolution } from "./nationality/persist";
-import { resolveAuthorNationality } from "./nationality/wikidata";
+import { persistResolution } from "../infrastructure/db/prisma-author-resolution-repository";
+import { resolveAuthorNationality } from "../domains/nationality-resolution/wikidata-resolver";
 
 // Add-reading domain: normalize form input (pure/tested) and persist a reading, resolving
 // any brand-new authors through the same Wikidata pipeline the seed uses.

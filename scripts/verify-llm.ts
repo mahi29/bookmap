@@ -1,6 +1,9 @@
 import { prisma } from "../src/infrastructure/db/prisma";
-import { resolveAuthorNationalityLLM } from "../src/lib/nationality/llm";
-import { NON_MANUAL, persistResolution } from "../src/lib/nationality/persist";
+import { resolveAuthorNationalityLLM } from "../src/domains/nationality-resolution/llm-resolver";
+import {
+  NON_MANUAL,
+  persistResolution,
+} from "../src/infrastructure/db/prisma-author-resolution-repository";
 import { createLlmClient, MAX_TITLES, runScript, sleep } from "./shared";
 
 // Verify (and correct) every non-manual author with Claude, using their book titles as

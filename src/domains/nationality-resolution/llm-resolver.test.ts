@@ -3,7 +3,7 @@ import {
   interpretLlmResult,
   resolveAuthorNationalityLLM,
   type LlmClient,
-} from "./llm";
+} from "./llm-resolver";
 
 describe("interpretLlmResult", () => {
   it("resolves a confident single country", () => {

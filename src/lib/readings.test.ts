@@ -129,7 +129,7 @@ vi.mock("../infrastructure/db/prisma", () => ({
   },
 }));
 
-vi.mock("./nationality/wikidata", () => ({
+vi.mock("../domains/nationality-resolution/wikidata-resolver", () => ({
   resolveAuthorNationality: vi.fn(async () => ({
     method: ResolutionMethod.Unresolved,
     confidence: null,
@@ -139,7 +139,7 @@ vi.mock("./nationality/wikidata", () => ({
   })),
 }));
 
-vi.mock("./nationality/persist", () => ({
+vi.mock("../infrastructure/db/prisma-author-resolution-repository", () => ({
   persistResolution: vi.fn(async () => true),
 }));
 

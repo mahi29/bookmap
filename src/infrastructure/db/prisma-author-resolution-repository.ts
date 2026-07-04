@@ -1,7 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { ResolutionMethod } from "../../domains/shared/constants";
-import { prisma } from "../../infrastructure/db/prisma";
-import type { ResolutionResult } from "./resolve";
+import { prisma } from "./prisma";
+import type { ResolutionResult } from "../../domains/nationality-resolution/resolve-country";
 
 // The single place that writes an author's resolution to the database. Every resolver
 // (Wikidata, LLM) and the add-reading flow funnel their result through persistResolution,

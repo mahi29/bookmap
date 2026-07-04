@@ -4,7 +4,7 @@ import {
   parseCountryAlpha3,
   resolveAuthorNationality,
   type WikidataEntity,
-} from "./wikidata";
+} from "./wikidata-resolver";
 
 const humanEntity: WikidataEntity = {
   id: "Q42",

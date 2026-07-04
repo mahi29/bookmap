@@ -1,9 +1,6 @@
-import { ResolutionMethod } from "../../domains/shared/constants";
-import {
-  countryName,
-  resolveToMapCountry,
-} from "../../domains/shared/countries";
-import type { ResolutionResult } from "./resolve";
+import { ResolutionMethod } from "../shared/constants";
+import { countryName, resolveToMapCountry } from "../shared/countries";
+import type { ResolutionResult } from "./resolve-country";
 
 // LLM fallback: for authors Wikidata couldn't resolve, ask Claude for the author's
 // countries of citizenship (usually one, sometimes two), using their book titles as

@@ -1,7 +1,10 @@
 import { ResolutionMethod } from "../src/domains/shared/constants";
 import { prisma } from "../src/infrastructure/db/prisma";
-import { NON_MANUAL, persistResolution } from "../src/lib/nationality/persist";
-import { resolveAuthorNationality } from "../src/lib/nationality/wikidata";
+import {
+  NON_MANUAL,
+  persistResolution,
+} from "../src/infrastructure/db/prisma-author-resolution-repository";
+import { resolveAuthorNationality } from "../src/domains/nationality-resolution/wikidata-resolver";
 import { runScript, sleep } from "./shared";
 
 // Resolve seeded authors to a map country via Wikidata, caching the result on each Author.

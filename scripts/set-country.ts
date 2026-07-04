@@ -3,7 +3,7 @@ import {
   resolveToMapCountry,
 } from "../src/domains/shared/countries";
 import { prisma } from "../src/infrastructure/db/prisma";
-import { setManualCountries } from "../src/lib/nationality/persist";
+import { setManualCountries } from "../src/infrastructure/db/prisma-author-resolution-repository";
 import { runScript } from "./shared";
 
 // Directly set an author's map country/countries as a manual pick. For one-off
