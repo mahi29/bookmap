@@ -9,11 +9,13 @@ import { createLlmClient, MAX_TITLES, runScript, sleep } from "./shared";
 // the Salvadoran journalist). Manual picks are user truth and are left untouched.
 //
 //   set ANTHROPIC_API_KEY in .env (or the environment), then: npm run db:verify-llm
+//   npm run db:verify-llm -- --dry-run   preview the same summary/corrections, write nothing
 
 const DELAY_MS = 200;
 const key = (iso3s: string[]) => [...iso3s].sort().join("+");
 
 async function main() {
+  const dryRun = process.argv.includes("--dry-run");
   const client = createLlmClient();
 
   const authors = await prisma.author.findMany({
@@ -27,8 +29,9 @@ async function main() {
     },
   });
 
+  const prefix = dryRun ? "[dry run] " : "";
   console.log(
-    `Verifying ${authors.length} non-manual author(s) with Claude...`,
+    `${prefix}Verifying ${authors.length} non-manual author(s) with Claude...`,
   );
   let confirmed = 0;
   let flagged = 0;
@@ -46,14 +49,14 @@ async function main() {
 
     if (r.iso3s.length > 0 && !r.needsReview) {
       // Confident answer wins — it has the book-title context Wikidata lacked.
-      await persistResolution(author.id, r);
+      if (!dryRun) await persistResolution(author.id, r);
       const next = key(r.iso3s);
       if (next !== current)
         corrections.push(`${author.name}: ${current || "(none)"} → ${next}`);
       else confirmed += 1;
     } else if (author.countries.length === 0) {
       // The LLM couldn't resolve it and we had nothing anyway — leave it for review.
-      await persistResolution(author.id, r);
+      if (!dryRun) await persistResolution(author.id, r);
       flagged += 1;
     }
     // Else: LLM unsure but Wikidata had a country — keep the existing answer, don't downgrade.
@@ -63,10 +66,10 @@ async function main() {
   }
 
   console.log(
-    `Done. ${confirmed} confirmed, ${corrections.length} corrected, ${flagged} left for review.`,
+    `${prefix}Done. ${confirmed} confirmed, ${corrections.length} corrected, ${flagged} left for review.`,
   );
   if (corrections.length > 0) {
-    console.log("\nCorrections:");
+    console.log(`\n${prefix}Corrections:`);
     for (const c of corrections.sort()) console.log(`  ${c}`);
   }
 }

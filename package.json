@@ -17,7 +17,8 @@
     "db:resolve": "tsx scripts/resolve-nationalities.ts",
     "db:resolve-llm": "tsx scripts/resolve-llm.ts",
     "db:verify-llm": "tsx scripts/verify-llm.ts",
-    "db:set": "tsx scripts/set-country.ts"
+    "db:set": "tsx scripts/set-country.ts",
+    "db:check": "tsx scripts/check.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
