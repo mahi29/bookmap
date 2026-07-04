@@ -87,15 +87,19 @@ date range (e.g. "countries I read in 2026"). Multi-user with username/password 
   aggregation, and input normalization.
 - **Verify in the browser** — every UI change checked on localhost via the Preview MCP
   (screenshot + inspect), not just tests.
-- **Separation of concerns** — `src/app/**` (components + thin server actions) / `src/lib/**`
-  (pure, framework-free domain: parsing, resolution, aggregation) / `src/lib/db.ts` (single
-  Prisma client). No file mixes JSX + business logic + DB. Styling in co-located CSS Modules
-  referencing tokens — no utility-class soup, no inline `style` in logic.
+- **Separation of concerns** — `src/app/**` (components + thin server actions) /
+  `src/domains/**` (framework-free domain: parsing, resolution, aggregation, auth rules) /
+  `src/infrastructure/**` (mechanisms: the single Prisma client, resolution repository,
+  password/session/cookie handling). No file mixes JSX + business logic + DB. Styling in
+  co-located CSS Modules referencing tokens — no utility-class soup, no inline `style` in
+  logic.
 - **Pragmatic, not over-engineered**; **strict TS + lint/format clean**.
 - Atomic, revertable commits pushed to `main` as work progresses.
 
 ## Data model (Prisma)
 
+- `User` (id, username **unique**, passwordHash [bcrypt; `LOCKED` sentinel = can't log in
+  until claimed via `db:set-password`], createdAt)
 - `Book` (id, title, isbn?, createdAt)
 - `Author` (id, name **unique**, wikidataId?, birthCountryIso3?, resolutionMethod
   [`wikidata`|`openlibrary`|`llm`|`manual`|`unresolved`], confidence?, reasoning?,
@@ -106,9 +110,10 @@ date range (e.g. "countries I read in 2026"). Multi-user with username/password 
 - `AuthorCountry` (authorId, iso3) — `@@id([authorId, iso3])`; the **nationality FK**,
   one author → many countries. This is what the map reads and what manual edits write.
 - `BookAuthor` (bookId, authorId) — co-authored books.
-- `Reading` (id, bookId, dateRead?, dateStarted?, rating?, source
-  [`storygraph`|`goodreads`|`manual`], importId?, rawRow?, createdAt)
-- `Import` (id, source, filename, rowCount, importedAt)
+- `Reading` (id, **userId**, bookId, dateRead?, dateStarted?, rating?, source
+  [`storygraph`|`goodreads`|`manual`], importId?, rawRow?, createdAt; indexes on
+  `bookId` and `(userId, dateRead)`)
+- `Import` (id, **userId**, source, filename, rowCount, importedAt)
 - Country reference (valid ISO alpha-3 set + defunct→successor map) lives in **code**
   (`src/lib/countries.ts`), not the DB.
 - Undated readings (`dateRead = null`) are all-time only; excluded from date-range views.
