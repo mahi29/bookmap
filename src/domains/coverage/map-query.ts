@@ -1,13 +1,14 @@
 import { prisma } from "../../infrastructure/db/prisma";
 import type { DetailEntry } from "./coverage-service";
 
-// Server data access: flatten readings -> books -> each author's map countries into
-// per-(book, country) entries, enriched with the book title and author name so the client
-// can both aggregate (coverage/intensity) and list a country's books in the detail pane.
-// An author with several citizenships contributes one entry per country; unread books and
-// unresolved authors contribute nothing.
-export async function getMapEntries(): Promise<DetailEntry[]> {
+// Server data access: flatten one user's readings -> books -> each author's map countries
+// into per-(book, country) entries, enriched with the book title and author name so the
+// client can both aggregate (coverage/intensity) and list a country's books in the detail
+// pane. An author with several citizenships contributes one entry per country; unread
+// books and unresolved authors contribute nothing.
+export async function getMapEntries(userId: string): Promise<DetailEntry[]> {
   const readings = await prisma.reading.findMany({
+    where: { userId },
     select: {
       bookId: true,
       dateRead: true,

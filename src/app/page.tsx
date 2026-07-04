@@ -11,7 +11,7 @@ import styles from "./page.module.css";
 export default async function Home() {
   const session = await verifySession();
   const [entries, needsReviewCount] = await Promise.all([
-    getMapEntries(),
+    getMapEntries(session.userId),
     getNeedsReviewCount(),
   ]);
 
