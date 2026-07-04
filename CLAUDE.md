@@ -3,8 +3,10 @@
 # BookMap
 
 A personal reading tracker whose signature feature is a **choropleth world map** shading
-each country by how much the user has read from authors of that nationality. Single-user
-for now (no auth). See the full plan, status, and ubiquitous language in
+each country by how much the user has read from authors of that nationality. Multi-user:
+username/password accounts (hand-rolled sessions, open signup); Readings/Imports are
+per-user, Books/Authors/nationalities are global. See the full plan, status, and
+ubiquitous language in
 [`docs/PLAN.md`](docs/PLAN.md) — keep it updated as the living source of truth.
 
 ## Ubiquitous language
@@ -59,6 +61,8 @@ for now (no auth). See the full plan, status, and ubiquitous language in
   Both need `ANTHROPIC_API_KEY` (put it in a gitignored `.env`).
 - `npm run db:set -- "Author Name" ISO3 [ISO3 ...]` — manually set an author's map
   country/countries (or use `npx prisma studio` to edit the `AuthorCountry` table directly).
+- `npm run db:set-password -- <username> <password>` — set/reset an account password
+  (claims a `LOCKED` bootstrap account). Auth needs `SESSION_SECRET` in `.env`.
 
 ## Version note
 

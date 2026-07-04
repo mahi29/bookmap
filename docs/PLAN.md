@@ -9,7 +9,7 @@
 A personal book-tracking website (like Goodreads/StoryGraph) whose signature feature is a
 **choropleth world map** shading each country by how much the user has read from authors of
 that nationality. It answers "how many countries have I read from?" — overall and within a
-date range (e.g. "countries I read in 2026"). Single-user, no auth yet. Repo:
+date range (e.g. "countries I read in 2026"). Multi-user with username/password auth. Repo:
 `github.com/mahi29/bookmap` (private); code at `/Users/mahith/Documents/BookMap`.
 
 ## Status at a glance
@@ -26,12 +26,13 @@ date range (e.g. "countries I read in 2026"). Single-user, no auth yet. Repo:
 | LLM verify pass + code-quality refactor | ✅ done (this checkpoint)                                             |
 | PR6 — CSV importer UI                   | ⬜ not started                                                        |
 | Deploy (Postgres + Vercel)              | 🟡 in progress — code swapped to Postgres, awaiting Neon/Vercel setup |
-| PR7 — Multi-user auth                   | ⬜ future — deliberately split from Deploy (see below)                |
+| PR7 — Multi-user auth                   | ✅ done (hand-rolled credentials — see below)                         |
 | Future enhancements                     | ⬜ see bottom section                                                 |
 
 ## Ubiquitous language (shared glossary)
 
-- **User** — a single implicit user (no auth). Schema stays user-scopable for later.
+- **User** — an account (unique username + bcrypt password hash). Readings and Imports
+  are per-user; Books/Authors/nationalities are global facts shared by everyone.
 - **Book** — a title with one or more **Authors**; carries an optional ISBN/UID.
 - **Author** — a person resolved to **one or more** _map countries_ (see Nationality).
 - **Reading** — an _event_: "User finished Book on date X." A book read twice = two Readings;
@@ -123,6 +124,8 @@ date range (e.g. "countries I read in 2026"). Single-user, no auth yet. Repo:
 - `db:resolve-llm` — Opus 4.8 fallback over the review queue (needs `ANTHROPIC_API_KEY`).
 - `db:set -- "Author Name" ISO3 [ISO3 ...]` — set an author's countries manually (or
   `npx prisma studio` to edit the `AuthorCountry` table directly).
+- `db:set-password -- <username> <password>` — set/reset an account password directly;
+  how a `LOCKED` bootstrap account (from the PR7 migration or the seed) gets claimed.
 
 Rebuild-from-scratch recipe: `db:seed` → `db:resolve` → (`db:resolve-llm`) → `db:set` as
 needed. Manual picks survive the whole loop.
@@ -190,10 +193,12 @@ needed. Manual picks survive the whole loop.
     `npm run db:check` (all 4 checks pass) and Preview MCP: 28 countries · 236 books,
     matching pre-migration exactly.
   - **Still needs a human:** connect the GitHub repo to a Vercel project (a first deploy
-    already happened — confirmed a working build, static pages generate against
-    `DATABASE_URL` at build time), set `DATABASE_URL`/`DIRECT_URL` there to a **production**
-    Neon branch (separate from `dev`), then repeat the same migration against it so prod
-    isn't re-seeded from scratch either.
+    already happened — confirmed a working build; note the home page is now
+    request-dynamic since PR7 reads the session cookie), set `DATABASE_URL`/`DIRECT_URL`
+    there to a **production** Neon branch (separate from `dev`) **plus a fresh
+    `SESSION_SECRET`** (PR7), then `prisma migrate deploy` against it (creates `User`,
+    backfills existing readings to the LOCKED `mahith` bootstrap account) and claim the
+    account with `db:set-password` pointed at prod.
   - `ANTHROPIC_API_KEY` is only used by the offline `db:resolve-llm`/`db:verify-llm`
     scripts, run manually against whichever `DATABASE_URL` you point at — it is not needed
     as a Vercel env var for the deployed app.
@@ -205,19 +210,52 @@ needed. Manual picks survive the whole loop.
     normalized title + author-set match, AND the same read date. Re-imports must be
     idempotent under this key (a no-op on repeat). Note: author-set matching inherits the
     `Author.name` uniqueness assumption below (same name = same author).
-- **PR7 — Multi-user auth.** Deliberately **deferred**, decoupled from Deploy above (decided
-  2026-07-04). When picked up: Auth.js (NextAuth), invite-only sign-in (a checked-in
-  allowlist or an `Invite` table — no open registration), scope all data by `userId`. Do the
-  `docs/REVIEW.md` **C1 DDD reorg** immediately before starting this — it touches exactly
-  the files this PR needs to thread `userId` through.
-  - **Data-scoping decision:** `Reading` and `Import` become per-user (add a `userId` FK,
-    scope all reading/import queries by the logged-in user). `Book`, `Author`, and
+- **PR7 — Multi-user auth. ✅ Done** (2026-07-04). **Decision reversal:** originally
+  penciled in as Auth.js (NextAuth) + invite-only; built instead as **hand-rolled
+  credentials with open signup** — for a toy app OAuth felt heavy, Auth.js's Credentials
+  provider is second-class with unproven Next 16 support, and the official Next 16 auth
+  guide (`node_modules/next/dist/docs/01-app/02-guides/authentication.md`) documents the
+  hand-rolled pattern end-to-end.
+  - **As built:** `bcryptjs` password hashing (pure JS — native bcrypt/argon2 break Vercel
+    builds; any non-bcrypt stored hash, notably the `LOCKED` sentinel, never authenticates)
+    - `jose`-signed stateless JWT session cookie (HS256 via **`SESSION_SECRET`** env var —
+      required locally and on Vercel; HttpOnly/secure/lax, 30-day) + a `cache()`d
+      `verifySession()` DAL (the real check, in `page.tsx` and mutating server actions) + an
+      optimistic redirect gate in `src/proxy.ts` (Next 16 renamed middleware → proxy).
+      Logged-out `/` redirects to `/login` (which carries the pitch + signup link).
+  - **Layering:** domain rules in `src/domains/auth/` (`validate-credentials`,
+    `auth-service`); mechanisms in `src/infrastructure/auth/` (`password`, `session-token`,
+    `session`, `dal`); pages/actions in `src/app/(auth)/`; logout in the map header.
+    The home page is now request-dynamic (reads the session cookie) — no longer
+    prerendered at build time.
+  - **Data scoping (as decided):** `Reading` and `Import` carry a `userId` FK (cascade);
+    all reading/import queries scope by the logged-in user. `Book`, `Author`, and
     `AuthorCountry` stay **global/shared** — an author's nationality is a universal fact,
     not user-specific, and resolution (Wikidata/LLM) is expensive, so duplicating it per
-    user has no value. Keeps PR7's schema change small and surgical.
+    user has no value. B6 indexes added (`Reading(bookId)`, `Reading(userId, dateRead)`,
+    `BookAuthor(authorId)`).
+  - **Existing-data migration:** the `reading_import_per_user` migration adds the columns
+    nullable, creates a bootstrap `mahith` user with the `LOCKED` sentinel hash
+    (`ON CONFLICT DO NOTHING`), backfills every Reading/Import to it, then sets NOT NULL —
+    repeatable verbatim against the production branch via `prisma migrate deploy`, safe
+    whether or not a real `mahith` account already exists there. The bootstrap account is
+    claimed with **`npm run db:set-password -- mahith <password>`** (signup rejects the
+    existing username; the LLM scripts' pattern applies — run it pointed at whichever
+    `DATABASE_URL`).
+  - **Scripts:** `db:seed` is dev-only and now takes `-- --user <username>` (default
+    `mahith`; wipes **all** users' readings, creates the user LOCKED if missing).
+    `db:check` prints per-user reading/import counts.
+  - Also landed: REVIEW.md **A5** (race-proof `persistResolution` — the manual guard is
+    now part of the write, in one transaction with the country replacement).
 
 ## Future enhancements (nice-to-haves, unscheduled)
 
+- **Public landing page** — logged-out `/` currently redirects to `/login`. To pitch
+  instead: drop `/` from the proxy's protected set (keep `/add`), add a nullable
+  `getSession()` helper next to `verifySession()`, and branch `page.tsx` — session → map,
+  none → a `Landing` component (pitch + login/signup buttons; a decorative map is cheap
+  since `Choropleth` already takes an `entries` prop). Data fetching stays in the
+  logged-in branch, so anonymous visitors never trigger per-user queries. ~1 short session.
 - **Search-to-add (external book API)** — in `/add`, type a **title** (or ISBN) and autofill
   title + author(s) + ISBN from **Open Library** (`openlibrary.org/search.json`, free, no key)
   or **Google Books** (`googleapis.com/books/v1/volumes`), so you don't type the author.

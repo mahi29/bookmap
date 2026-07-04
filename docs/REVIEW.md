@@ -64,12 +64,16 @@ Findings ranked by value.
       **Done (TDD)** — the constructed date is checked to round-trip to the exact
       parsed Y/M/D; rolled-over dates now return `{ ok: false }`.
 
-- [ ] **A5. `persistResolution` read-then-write race.**
+- [x] **A5. `persistResolution` read-then-write race.**
       `src/lib/nationality/persist.ts` checks `resolutionMethod !== manual`, then
       updates in a second statement. Theoretical single-user; violates never-clobber
       under multi-user concurrency. **Fix (fold into PR7):** make the guard part of
       the write (`updateMany` with `resolutionMethod: { not: manual }` in the
       `where`) + countries write in a transaction.
+      **Done (PR7)** — `persistResolution` now runs one `$transaction`: `updateMany`
+      with the `NON_MANUAL` filter in the `where` (count 0 → return false, nothing
+      written), then `authorCountry` deleteMany/createMany in the same transaction
+      (`src/infrastructure/db/prisma-author-resolution-repository.ts`).
 
 - [x] **A6. `db:verify-llm` applies corrections with no review step.** A
       confident-but-wrong LLM answer overwrites a correct Wikidata answer before the
@@ -120,9 +124,12 @@ Findings ranked by value.
 - [ ] **B5. LLM sweeps via the Anthropic Message Batches API** (50% cost, no
       sleep loops) — natural fit for `db:verify-llm` over the full library. Only
       worth it if sweeps become routine; at ~$1/pass, skip until then.
-- [ ] **B6. Postgres-era indexes** (when the multi-user schema lands): Prisma
+- [x] **B6. Postgres-era indexes** (when the multi-user schema lands): Prisma
       does not auto-index FK columns — add `@@index` on `Reading(bookId)`,
       `Reading(dateRead)` (or `(userId, dateRead)`), `BookAuthor(authorId)`.
+      **Done (PR7)** — `Reading(bookId)`, `Reading(userId, dateRead)`, and
+      `BookAuthor(authorId)` indexes added in the `reading_import_per_user`
+      migration alongside the userId columns.
 
 **Explicit non-problems:** client-side re-aggregation on period change, the sqrt
 shading ramp, `computeCoverage`'s pair-set, the hover handler — all fine at this
