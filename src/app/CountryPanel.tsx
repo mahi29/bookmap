@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { CountryBook } from "@/lib/coverage";
+import type { CountryBook } from "@/domains/coverage/coverage-service";
 import styles from "./CountryPanel.module.css";
 
 export interface CountryDetail {

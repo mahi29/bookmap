@@ -4,7 +4,7 @@ import {
   computeCoverage,
   type CoverageEntry,
   type DetailEntry,
-} from "./coverage";
+} from "./coverage-service";
 
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
 

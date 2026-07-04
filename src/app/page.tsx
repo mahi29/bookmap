@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { getMapEntries, getNeedsReviewCount } from "@/lib/map-data";
+import {
+  getMapEntries,
+  getNeedsReviewCount,
+} from "@/domains/coverage/map-query";
 import MapView from "./MapView";
 import styles from "./page.module.css";
 

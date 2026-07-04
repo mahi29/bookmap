@@ -6,7 +6,7 @@ import {
   booksForCountry,
   computeCoverage,
   type DetailEntry,
-} from "@/lib/coverage";
+} from "@/domains/coverage/coverage-service";
 import Choropleth from "./Choropleth";
 import CountryPanel from "./CountryPanel";
 import styles from "./MapView.module.css";

@@ -1,5 +1,5 @@
-import { prisma } from "../infrastructure/db/prisma";
-import type { DetailEntry } from "./coverage";
+import { prisma } from "../../infrastructure/db/prisma";
+import type { DetailEntry } from "./coverage-service";
 
 // Server data access: flatten readings -> books -> each author's map countries into
 // per-(book, country) entries, enriched with the book title and author name so the client

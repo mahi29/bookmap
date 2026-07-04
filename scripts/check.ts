@@ -1,6 +1,6 @@
 import { isValidMapCountry } from "../src/domains/shared/countries";
 import { prisma } from "../src/infrastructure/db/prisma";
-import { getCountryShapes } from "../src/lib/geo";
+import { getCountryShapes } from "../src/domains/coverage/geo";
 import { runScript } from "./shared";
 
 // Data-integrity checks over the Author/AuthorCountry tables. Read-only — reports

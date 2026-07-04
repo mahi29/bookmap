@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { geoEqualEarth, geoPath } from "d3-geo";
 import type { FeatureCollection } from "geojson";
-import { getCountryShapes } from "@/lib/geo";
+import { getCountryShapes } from "@/domains/coverage/geo";
 import styles from "./Choropleth.module.css";
 
 const WIDTH = 960;
