@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { CountryShape } from "@/lib/geo";
 import { countryName } from "@/lib/countries";
 import {
   booksForCountry,
@@ -13,13 +12,13 @@ import CountryPanel from "./CountryPanel";
 import styles from "./MapView.module.css";
 
 interface Props {
-  shapes: CountryShape[];
   entries: DetailEntry[];
+  needsReviewCount: number;
 }
 
 const ALL_TIME = "all";
 
-export default function MapView({ shapes, entries }: Props) {
+export default function MapView({ entries, needsReviewCount }: Props) {
   const [period, setPeriod] = useState<string>(ALL_TIME);
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -32,12 +31,22 @@ export default function MapView({ shapes, entries }: Props) {
     return [...set].sort((a, b) => b - a);
   }, [entries]);
 
+  // Distinct undated entries (no dateRead), hidden from any bounded year view — surfaced
+  // as a hint so the count change isn't a mystery when a specific year is selected.
+  const undatedCount = useMemo(() => {
+    const bookIds = new Set<string>();
+    for (const e of entries) {
+      if (e.dateRead === null) bookIds.add(e.bookId);
+    }
+    return bookIds.size;
+  }, [entries]);
+
   const range = useMemo(() => {
     if (period === ALL_TIME) return {};
     const y = Number(period);
     return {
       from: new Date(Date.UTC(y, 0, 1)),
-      to: new Date(Date.UTC(y, 11, 31, 23, 59, 59)),
+      to: new Date(Date.UTC(y + 1, 0, 1)), // exclusive: start of next year
     };
   }, [period]);
 
@@ -62,25 +71,41 @@ export default function MapView({ shapes, entries }: Props) {
   return (
     <section className={styles.panel}>
       <header className={styles.header}>
-        <div className={styles.stats}>
-          <span className={styles.big}>{coverage}</span>
-          <span className={styles.label}>countries · {totalBooks} books</span>
+        <div className={styles.statsGroup}>
+          <div className={styles.stats}>
+            <span className={styles.big}>{coverage}</span>
+            <span className={styles.label}>countries · {totalBooks} books</span>
+          </div>
+          {needsReviewCount > 0 && (
+            <span className={styles.hint}>
+              {needsReviewCount} author{needsReviewCount === 1 ? "" : "s"} need
+              {needsReviewCount === 1 ? "s" : ""} a country
+            </span>
+          )}
         </div>
-        <label className={styles.filter}>
-          <span className={styles.filterLabel}>Period</span>
-          <select
-            className={styles.select}
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-          >
-            <option value={ALL_TIME}>All time</option>
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className={styles.filterGroup}>
+          <label className={styles.filter}>
+            <span className={styles.filterLabel}>Period</span>
+            <select
+              className={styles.select}
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+            >
+              <option value={ALL_TIME}>All time</option>
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+          {period !== ALL_TIME && undatedCount > 0 && (
+            <span className={styles.hint}>
+              +{undatedCount} undated book{undatedCount === 1 ? "" : "s"} not
+              shown
+            </span>
+          )}
+        </div>
       </header>
 
       <div className={styles.legend}>
@@ -90,7 +115,6 @@ export default function MapView({ shapes, entries }: Props) {
       </div>
 
       <Choropleth
-        shapes={shapes}
         byCountry={byCountry}
         selectedIso3={selected}
         onSelect={(iso3) => setSelected((cur) => (cur === iso3 ? null : iso3))}

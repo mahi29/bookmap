@@ -12,6 +12,7 @@ export interface CoverageEntry {
 
 export interface DateRange {
   from?: Date;
+  /** Exclusive upper bound: a reading on exactly `to` is excluded. */
   to?: Date;
 }
 
@@ -29,7 +30,7 @@ function inRange(dateRead: Date | null, range: DateRange): boolean {
   if (!bounded) return true; // all-time includes undated readings
   if (dateRead === null) return false; // undated is excluded from a bounded range
   if (range.from && dateRead < range.from) return false;
-  if (range.to && dateRead > range.to) return false;
+  if (range.to && dateRead >= range.to) return false;
   return true;
 }
 

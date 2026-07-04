@@ -42,3 +42,8 @@ export async function getMapEntries(): Promise<DetailEntry[]> {
   }
   return entries;
 }
+
+/** Number of authors still in the review queue (unresolved map country). */
+export async function getNeedsReviewCount(): Promise<number> {
+  return prisma.author.count({ where: { needsReview: true } });
+}
