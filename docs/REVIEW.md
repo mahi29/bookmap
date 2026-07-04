@@ -162,11 +162,21 @@ scale; don't "fix" them.
   value objects in the shared kernel. **Timing: immediately before PR7** —
   multi-user rewrites these files anyway.
 
-- [ ] **C2.** Deduplicate the `unresolved()` result constructor
+- [x] **C2.** Deduplicate the `unresolved()` result constructor
       (`nationality/resolve.ts` + `wikidata.ts`) when the files move.
-- [ ] **C3.** `llm.ts#mapCountries` re-implements `chooseMapCountry`'s
+      **Done** — `resolve-country.ts`'s `unresolved()` is now exported;
+      `wikidata-resolver.ts` spreads `wikidataId` onto it instead of a local copy.
+      Also caught and fixed a third, identically-shaped instance in
+      `llm-resolver.ts`'s catch block (not in the original scope, but the same
+      duplication).
+- [x] **C3.** `llm.ts#mapCountries` re-implements `chooseMapCountry`'s
       map-and-dedupe — share one "raw strings → map countries" helper (the
       `Iso3CountryCode` VO's job).
+      **Done** — extracted as `resolveToMapCountries()` in the shared kernel
+      (`domains/shared/countries.ts`), with its own test coverage; both resolvers
+      call it now. (Didn't introduce the full `Iso3CountryCode` value object —
+      this thin function covers the actual duplication; the VO remains an
+      optional future step if primitive-string handling elsewhere warrants it.)
 - [x] **C4. Review-queue visibility:** 5 authors need manual countries and the
       UI never says so. A one-line "N authors unplaced" note on the map page (no
       review UI, just visibility).
