@@ -50,8 +50,10 @@ Findings ranked by value.
       **Options:** (a) switch to `countries-50m` (has the small states; bigger
       payload), (b) dot markers for shapeless countries, (c) minimum: a data check
       that every resolver-producible ISO3 has a shape + a UI note ("not shown on
-      map: …"). Pairs well with a country _list_ view. **Direction blocked on open
-      question Q2 below.**
+      map: …"). Pairs well with a country _list_ view.
+      **Deferred** (2026-07-03) — Q2 answered as "defer for now"; revisit once
+      there's appetite for it. `db:check` (D3) already surfaces the gap generically
+      in the meantime.
 
 - [x] **A4. Date validation accepts rolled-over garbage.**
       `normalizeReadingInput` (`src/lib/readings.ts`) regex-checks `YYYY-MM-DD`, but
@@ -208,10 +210,13 @@ scale; don't "fix" them.
    recorded/done ahead of schedule — see D1, D4 — but A5 itself and the reorg
    are still pending, to be done together right before PR7.)
 
-## Open questions (blocking direction, not code)
+## Open questions (blocking direction, not code) — resolved 2026-07-03
 
-- **Q1.** Is deploy + multi-user still the next milestone? If yes: do 1–3 now,
-  fold A5/D4 into PR7 rather than standalone.
-- **Q2.** Shapeless countries (Singapore et al.): is a supplementary country
-  _list_ view acceptable, or should the map itself show them (50m geometry /
-  dot markers)? Decides A3's direction.
+- **Q1.** Is deploy + multi-user still the next milestone? — **Yes.** PR7
+  (multi-user auth + deploy) is next. A5 folds into it (already scoped that way
+  above); D1/D4 were already done ahead of schedule. **Next concrete step per
+  the priority order below: the C1 DDD reorg, immediately before PR7 work
+  starts.**
+- **Q2.** Shapeless countries (Singapore et al.) — **Deferred for now.** No map
+  UI decision needed yet; `db:check` (D3) already flags the gap generically
+  (e.g. `VAT`) so it isn't silently lost. Revisit later.
