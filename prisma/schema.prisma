@@ -24,19 +24,28 @@ model Book {
   readings  Reading[]
 }
 
-/// A person resolved to exactly one map country (country of citizenship, ISO alpha-3).
+/// A person resolved to one or more map countries (all citizenships, ISO alpha-3).
 model Author {
-  id                  String       @id @default(cuid())
-  name                String       @unique
-  wikidataId          String?
-  resolvedCountryIso3 String? // the single map country; null until resolved
-  birthCountryIso3    String? // secondary, for future views; never colors the map
-  resolutionMethod    String       @default("unresolved") // wikidata | openlibrary | llm | manual | unresolved
-  confidence          Float? // 0..1, present for llm/automated resolutions
-  reasoning           String? // human-readable justification (esp. for llm)
-  needsReview         Boolean      @default(false)
-  resolvedAt          DateTime?
-  books               BookAuthor[]
+  id               String          @id @default(cuid())
+  name             String          @unique
+  wikidataId       String?
+  birthCountryIso3 String? // secondary, for future views; never colors the map
+  resolutionMethod String          @default("unresolved") // wikidata | openlibrary | llm | manual | unresolved
+  confidence       Float? // 0..1, present for llm/automated resolutions
+  reasoning        String? // human-readable justification (esp. for llm)
+  needsReview      Boolean         @default(false)
+  resolvedAt       DateTime?
+  books            BookAuthor[]
+  countries        AuthorCountry[]
+}
+
+/// A map country attributed to an Author (an author can hold several citizenships).
+model AuthorCountry {
+  authorId String
+  iso3     String // ISO 3166-1 alpha-3 modern map country
+  author   Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@id([authorId, iso3])
 }
 
 /// Join between Book and Author (books can be co-authored).
