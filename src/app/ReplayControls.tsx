@@ -8,6 +8,7 @@ interface Props {
   frame: MonthFrame;
   frameIndex: number;
   frameCount: number;
+  stepMs: number;
   onTogglePlay: () => void;
   onScrub: (index: number) => void;
   onExit: () => void;
@@ -28,6 +29,7 @@ export default function ReplayControls({
   frame,
   frameIndex,
   frameCount,
+  stepMs,
   onTogglePlay,
   onScrub,
   onExit,
@@ -36,7 +38,12 @@ export default function ReplayControls({
   const playLabel = playing ? "Pause" : "Play";
 
   return (
-    <div className={styles.replay}>
+    <div
+      className={styles.replay}
+      data-replay-index={frameIndex}
+      data-replay-frames={frameCount}
+      data-replay-step={stepMs}
+    >
       <div className={styles.replayButtons}>
         <button
           type="button"

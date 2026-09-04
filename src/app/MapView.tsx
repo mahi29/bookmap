@@ -103,11 +103,23 @@ export default function MapView({ entries, needsReviewCount }: Props) {
   );
 
   useEffect(() => {
+    // Keep exactly one ticker on `window` so Fast Refresh / Strict Mode remounts
+    // cannot leave a stray interval advancing frames in the background.
+    const w = window as Window & { __bookmapReplayTick?: number };
+    if (w.__bookmapReplayTick != null) {
+      window.clearInterval(w.__bookmapReplayTick);
+      w.__bookmapReplayTick = undefined;
+    }
     if (!isPlaying) return;
-    const id = window.setInterval(() => {
+    w.__bookmapReplayTick = window.setInterval(() => {
       setFrameIndex((i) => Math.min(i + 1, lastIndex));
     }, stepMs);
-    return () => window.clearInterval(id);
+    return () => {
+      if (w.__bookmapReplayTick != null) {
+        window.clearInterval(w.__bookmapReplayTick);
+        w.__bookmapReplayTick = undefined;
+      }
+    };
   }, [isPlaying, stepMs, lastIndex]);
 
   function startReplay() {
@@ -162,6 +174,7 @@ export default function MapView({ entries, needsReviewCount }: Props) {
               frame={frame}
               frameIndex={clampedIndex}
               frameCount={frames.length}
+              stepMs={stepMs}
               onTogglePlay={togglePlay}
               onScrub={(index) => {
                 setPlaying(false);
