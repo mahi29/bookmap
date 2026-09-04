@@ -52,7 +52,7 @@ export default function ReplayControls({
         </button>
       </div>
       <label className={styles.scrubberLabel}>
-        <span className={styles.srOnly}>Replay month</span>
+        <span className={styles.monthLabel}>{label}</span>
         <input
           className={styles.scrubber}
           type="range"
