@@ -53,6 +53,12 @@
   gap: 0.3rem;
 }
 
+.filterRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
 .filter {
   display: flex;
   flex-direction: column;
@@ -97,4 +103,67 @@
     var(--map-empty),
     color-mix(in srgb, var(--accent) 85%, var(--map-empty))
   );
+}
+
+.replayStart,
+.replayPlay,
+.replayExit {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.75rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.replayStart:hover,
+.replayPlay:hover,
+.replayExit:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.replayPlay[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+}
+
+.replayPlay[aria-pressed="true"]:hover {
+  color: var(--accent-contrast);
+}
+
+.replay {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+  min-width: min(16rem, 100%);
+}
+
+.replayButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.scrubberLabel {
+  display: block;
+}
+
+.scrubber {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.monthLabel {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
