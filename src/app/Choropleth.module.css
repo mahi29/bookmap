@@ -17,6 +17,12 @@
   cursor: pointer;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .country {
+    transition: none;
+  }
+}
+
 .country:hover {
   stroke: var(--text);
   stroke-width: 0.8px;

@@ -39,7 +39,8 @@ export function computeCoverage(
   range: DateRange = {},
 ): CoverageResult {
   // Dedupe to distinct (book, country): a book counts once per country regardless of
-  // how many of its authors share that country.
+  // how many of its authors share that country. Replay uses the same function with a
+  // cumulative `to` bound (see replay.ts).
   const pairs = new Set<string>();
   const books = new Set<string>();
   for (const entry of entries) {

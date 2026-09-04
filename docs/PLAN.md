@@ -1,8 +1,8 @@
 # BookMap — a reading tracker with an author-nationality map
 
 > **Living document.** This is the source of truth for BookMap's design and status. Update
-> it when decisions change. Last reconciled at the **PR7 + deploy checkpoint** (multi-user
-> auth shipped; live in production on Vercel + a Neon prod branch).
+> it when decisions change. Last reconciled after the **map replay timelapse** (month-by-month
+> cumulative fill from the user's first dated reading).
 
 ## Context
 
@@ -27,6 +27,7 @@ date range (e.g. "countries I read in 2026"). Multi-user with username/password 
 | PR6 — CSV importer UI                   | ⬜ not started                                                    |
 | Deploy (Postgres + Vercel)              | ✅ done — live at bookmap-flame.vercel.app (Neon prod branch)     |
 | PR7 — Multi-user auth                   | ✅ done (hand-rolled credentials — see below)                     |
+| Map replay (month-by-month timelapse)   | ✅ done                                                           |
 | Future enhancements                     | ⬜ see bottom section                                             |
 
 ## Ubiquitous language (shared glossary)
@@ -165,6 +166,14 @@ needed. Manual picks survive the whole loop.
   global, existing readings backfilled to a bootstrap `mahith` user via the migration.
   Shipped live to https://bookmap-flame.vercel.app on a dedicated Neon prod branch. Full
   detail in the Deploy bullet under the (now historical) "Remaining work" section below.
+- **Map replay** — a Play control on the map that rewinds to the user's first dated
+  reading and advances **month by month**, cumulatively, so the choropleth fills in over
+  time. Empty calendar months are skipped (the date label jumping is how gaps show);
+  undated readings stay out of the timeline (same rule as any bounded range). Shading
+  is locked to the final-frame max so countries only get darker. Client-side only:
+  `listReplayMonths` / `rangeThroughMonth` in `src/domains/coverage/replay.ts` plus the
+  existing `computeCoverage`. Pause, scrub, and Exit; the year filter is disabled for
+  the duration and restored on Exit. Hidden when there are fewer than two dated months.
 
 ## Current data state (local dev.db, gitignored)
 
@@ -307,10 +316,10 @@ needed. Manual picks survive the whole loop.
 - **End-to-end:** `db:seed` a StoryGraph CSV → `db:resolve` → open the map, confirm shaded
   countries + counter → correct a stray author with `db:set` and see the map update → filter
   to a year and confirm the counter/shading change → add a book via `/add` and confirm it
-  appears.
+  appears → hit Replay and watch coverage grow month by month, pause/scrub/exit.
 - **Automated tests:** CSV parser, country successor mapping, the citizenship→countries
-  mapping, coverage/intensity aggregation, LLM interpretation + confidence gate, and add-form
-  input normalization. Wikidata/OpenLibrary HTTP and the Anthropic SDK are mocked (no live
-  calls in tests).
+  mapping, coverage/intensity aggregation, replay month frames + cumulative range, LLM
+  interpretation + confidence gate, and add-form input normalization. Wikidata/OpenLibrary
+  HTTP and the Anthropic SDK are mocked (no live calls in tests).
 - **Data integrity:** every stored country is a valid modern alpha-3; an author has countries
   **iff** not `needsReview`; counts reconcile (resolved + review = total).

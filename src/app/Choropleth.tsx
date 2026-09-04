@@ -19,6 +19,9 @@ interface Props {
   byCountry: Record<string, number>;
   selectedIso3: string | null;
   onSelect: (iso3: string) => void;
+  /** When set, the shading ramp uses this as max intensity so replay frames
+   *  only get darker, never wash out as the running max grows. */
+  shadeMax?: number;
 }
 
 interface Hover {
@@ -41,6 +44,7 @@ export default function Choropleth({
   byCountry,
   selectedIso3,
   onSelect,
+  shadeMax,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<Hover | null>(null);
@@ -63,10 +67,10 @@ export default function Choropleth({
     return geoPath(projection);
   }, [shapes]);
 
-  const max = useMemo(
-    () => Math.max(1, ...Object.values(byCountry)),
-    [byCountry],
-  );
+  const max = useMemo(() => {
+    const dataMax = Math.max(0, ...Object.values(byCountry));
+    return Math.max(1, shadeMax ?? dataMax);
+  }, [byCountry, shadeMax]);
 
   return (
     <div className={styles.wrap} ref={wrapRef}>
