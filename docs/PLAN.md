@@ -1,8 +1,7 @@
 # BookMap — a reading tracker with an author-nationality map
 
 > **Living document.** This is the source of truth for BookMap's design and status. Update
-> it when decisions change. Last reconciled at the **PR7 + deploy checkpoint** (multi-user
-> auth shipped; live in production on Vercel + a Neon prod branch).
+> it when decisions change. Last reconciled while **PR6 (CSV importer UI)** was in progress.
 
 ## Context
 
@@ -24,7 +23,7 @@ date range (e.g. "countries I read in 2026"). Multi-user with username/password 
 | PR5 — "Add reading" flow                | ✅ done                                                           |
 | Map polish (legend + country pane)      | ✅ done                                                           |
 | LLM verify pass + code-quality refactor | ✅ done (this checkpoint)                                         |
-| PR6 — CSV importer UI                   | ⬜ not started                                                    |
+| PR6 — CSV importer UI                   | 🔄 in progress — generic CSV, confirm-then-commit                 |
 | Deploy (Postgres + Vercel)              | ✅ done — live at bookmap-flame.vercel.app (Neon prod branch)     |
 | PR7 — Multi-user auth                   | ✅ done (hand-rolled credentials — see below)                     |
 | Future enhancements                     | ⬜ see bottom section                                             |
@@ -104,16 +103,26 @@ date range (e.g. "countries I read in 2026"). Multi-user with username/password 
 - `Author` (id, name **unique**, wikidataId?, birthCountryIso3?, resolutionMethod
   [`wikidata`|`openlibrary`|`llm`|`manual`|`unresolved`], confidence?, reasoning?,
   needsReview, resolvedAt). **Known limitation:** `name` is globally `@unique`, so two
-  real different people sharing an exact name string are currently treated as one
-  Author/nationality — no disambiguation. This also constrains the PR6 dedup design
-  above: author-set matching inherits the same-name-same-author assumption.
+  real different people sharing an exact name string are treated as one
+  Author/nationality — there is no disambiguation path. `/add` upserts by name, and the
+  CSV importer does the same: an exact name match (case-insensitive) **reuses** the
+  existing author with no confirm. A CSV `John Doe` against a catalog `John Doe` is
+  treated as the same person, even if they are not; a “different person” choice would
+  have nowhere to write. Last-name shorthand (e.g. `Hemingway` → Ernest Hemingway)
+  only auto-binds when that last name is unique in the catalog (with a preview
+  warning); shared last names (`Wilson` matching two Wilsons) are surfaced as
+  ambiguous and never auto-picked. **Follow-up:** drop the uniqueness constraint
+  (and add a disambiguator — Wikidata id, birth year, or an explicit qualifier) so
+  homonymous authors can coexist. Until then, author-set matching for PR6 dedup
+  inherits same-name-same-author.
 - `AuthorCountry` (authorId, iso3) — `@@id([authorId, iso3])`; the **nationality FK**,
   one author → many countries. This is what the map reads and what manual edits write.
 - `BookAuthor` (bookId, authorId) — co-authored books.
 - `Reading` (id, **userId**, bookId, dateRead?, dateStarted?, rating?, source
-  [`storygraph`|`goodreads`|`manual`], importId?, rawRow?, createdAt; indexes on
+  [`storygraph`|`goodreads`|`manual`|`csv`], importId?, rawRow?, createdAt; indexes on
   `bookId` and `(userId, dateRead)`)
-- `Import` (id, **userId**, source, filename, rowCount, importedAt)
+- `Import` (id, **userId**, source [`storygraph`|`goodreads`|`csv`], filename, rowCount,
+  importedAt)
 - Country reference (valid ISO alpha-3 set + defunct→successor map) lives in **code**
   (`src/lib/countries.ts`), not the DB.
 - Undated readings (`dateRead = null`) are all-time only; excluded from date-range views.
@@ -225,14 +234,34 @@ needed. Manual picks survive the whole loop.
   - `ANTHROPIC_API_KEY` is only used by the offline `db:resolve-llm`/`db:verify-llm`
     scripts, run manually against whichever `DATABASE_URL` you point at — it is not needed
     as a Vercel env var for the deployed app.
-- **PR6 — CSV importer UI.** Promote the seed script into an upload page: StoryGraph first,
-  then Goodreads (needs a Goodreads CSV parser); source tagging; dedup by ISBN/title+date;
-  idempotent re-import; import summary.
+- **PR6 — CSV importer UI.** `/import` (logged-in): drop a **generic** CSV, review a
+  preview, then confirm. StoryGraph/Goodreads export parsers stay out of v1 (`db:seed`
+  still loads StoryGraph). Source tag is `csv`. Cap: first **1000** data rows (trim with
+  a warning, do not reject the file).
+  - **Columns:** title **or** ISBN (required); author optional; date read optional
+    (`YYYY-MM-DD` or `YYYY/MM/DD`). Header aliases are case-insensitive (`title`/`Title`,
+    `isbn`/`ISBN`/`ISBN/UID`, `author`/`authors`, `date read`/`Last Date Read`).
+  - **ISBN-only:** look up the global catalog (ISBN-10 and ISBN-13, hyphens stripped,
+    folded to ISBN-13). If found, use that book; if not, the row is **incomplete** (cannot
+    create a book without a title). No Open Library lookup in v1.
+  - **Matching:** ISBN unique hit wins; else case-insensitive title (whitespace collapsed);
+    author set must match to reuse a same-title book. New title + author → create. New
+    title + no author + no unique title hit → **incomplete** (do not create an authorless
+    book). Several books sharing a title and no author to tell them apart → **ambiguous**,
+    never auto-pick.
+  - **Authors:** reuse a catalog author on case-insensitive exact name, or on a **unique**
+    last-name shorthand (`Hemingway` → Ernest Hemingway, shown as a preview warning).
+    Shared last names are ambiguous. Exact same full name is the same person — see the
+    Author uniqueness limitation above. New names are created `unresolved`; **no Wikidata
+    during import** (run `db:resolve` afterwards).
+  - **Confirm-then-commit:** parse + match writes nothing. The user resolves every
+    ambiguous row (pick a candidate book/author, or create with an author), then confirms.
+    One transaction; a failure does not leave a partial library.
   - **Dedup key:** two rows are the same reading if they share
     `(isbn OR normalizedTitle+authors, dateRead)` — an ISBN match (when present) or a
-    normalized title + author-set match, AND the same read date. Re-imports must be
-    idempotent under this key (a no-op on repeat). Note: author-set matching inherits the
-    `Author.name` uniqueness assumption below (same name = same author).
+    normalized title + author-set match, AND the same read date (two undated readings of
+    the same book also collide). Re-imports are a no-op on repeat. Author-set matching
+    inherits same-name-same-author until uniqueness is dropped.
 - **PR7 — Multi-user auth. ✅ Done** (2026-07-04). **Decision reversal:** originally
   penciled in as Auth.js (NextAuth) + invite-only; built instead as **hand-rolled
   credentials with open signup** — for a toy app OAuth felt heavy, Auth.js's Credentials
@@ -273,6 +302,11 @@ needed. Manual picks survive the whole loop.
 
 ## Future enhancements (nice-to-haves, unscheduled)
 
+- **Homonymous authors** — drop `Author.name` `@unique` so two people who share a name
+  can coexist. Needs a disambiguator (Wikidata id when resolved; otherwise a qualifier
+  such as birth year) and importer/`/add` UI to choose “same person” vs “someone new”
+  instead of silently merging. Blocked on that schema change; recorded as a known
+  limitation on `Author` above.
 - **Public landing page** — logged-out `/` currently redirects to `/login`. To pitch
   instead: drop `/` from the proxy's protected set (keep `/add`), add a nullable
   `getSession()` helper next to `verifySession()`, and branch `page.tsx` — session → map,
@@ -308,9 +342,10 @@ needed. Manual picks survive the whole loop.
   countries + counter → correct a stray author with `db:set` and see the map update → filter
   to a year and confirm the counter/shading change → add a book via `/add` and confirm it
   appears.
-- **Automated tests:** CSV parser, country successor mapping, the citizenship→countries
-  mapping, coverage/intensity aggregation, LLM interpretation + confidence gate, and add-form
-  input normalization. Wikidata/OpenLibrary HTTP and the Anthropic SDK are mocked (no live
-  calls in tests).
+- **Automated tests:** CSV parser (StoryGraph + generic import), ISBN-10/13 folding,
+  import matching (ambiguity, last-name shorthand, same-name-same-author), country
+  successor mapping, the citizenship→countries mapping, coverage/intensity aggregation,
+  LLM interpretation + confidence gate, and add-form input normalization.
+  Wikidata/OpenLibrary HTTP and the Anthropic SDK are mocked (no live calls in tests).
 - **Data integrity:** every stored country is a valid modern alpha-3; an author has countries
   **iff** not `needsReview`; counts reconcile (resolved + review = total).

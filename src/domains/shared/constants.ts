@@ -16,6 +16,7 @@ export const ReadingSource = {
   StoryGraph: "storygraph",
   Goodreads: "goodreads",
   Manual: "manual",
+  Csv: "csv",
 } as const;
 
 export type ReadingSource = (typeof ReadingSource)[keyof typeof ReadingSource];
