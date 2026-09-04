@@ -172,8 +172,11 @@ needed. Manual picks survive the whole loop.
   undated readings stay out of the timeline (same rule as any bounded range). Shading
   is locked to the final-frame max so countries only get darker. Client-side only:
   `listReplayMonths` / `rangeThroughMonth` in `src/domains/coverage/replay.ts` plus the
-  existing `computeCoverage`. Pause, scrub, and Exit; the year filter is disabled for
-  the duration and restored on Exit. Hidden when there are fewer than two dated months.
+  existing `computeCoverage`. Playback speed follows the calendar span from first to
+  last dated reading: **2 seconds per month** when the library is young, speeding up
+  so a long history still finishes in ~12s. Pause, scrub, and Exit; the year filter is
+  disabled for the duration and restored on Exit. Hidden when there are fewer than two
+  dated months.
 
 ## Current data state (local dev.db, gitignored)
 

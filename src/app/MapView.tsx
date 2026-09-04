@@ -10,6 +10,7 @@ import {
 import {
   listReplayMonths,
   rangeThroughMonth,
+  readingSpanMs,
   replayStepMs,
 } from "@/domains/coverage/replay";
 import Choropleth from "./Choropleth";
@@ -56,6 +57,7 @@ export default function MapView({ entries, needsReviewCount }: Props) {
   }, [entries]);
 
   const frames = useMemo(() => listReplayMonths(entries), [entries]);
+  const spanMs = useMemo(() => readingSpanMs(entries), [entries]);
   const canReplay = frames.length >= 2;
   const lastIndex = Math.max(frames.length - 1, 0);
   const clampedIndex = Math.min(frameIndex, lastIndex);
@@ -65,7 +67,7 @@ export default function MapView({ entries, needsReviewCount }: Props) {
   // a setState-in-effect, and so we never schedule a tick that walks off the end
   // (which would fall back to frames[0] and look like a random restart).
   const isPlaying = playing && !atEnd;
-  const stepMs = replayStepMs(frames.length);
+  const stepMs = replayStepMs(frames.length, spanMs);
 
   const range = useMemo(() => {
     if (replay && frame) return rangeThroughMonth(frame);

@@ -9,7 +9,7 @@ import {
   screen,
 } from "@testing-library/react";
 import type { DetailEntry } from "@/domains/coverage/coverage-service";
-import { replayStepMs } from "@/domains/coverage/replay";
+import { readingSpanMs, replayStepMs } from "@/domains/coverage/replay";
 import MapView from "./MapView";
 
 vi.mock("./Choropleth", () => ({
@@ -46,7 +46,7 @@ const entries: DetailEntry[] = [
   },
 ];
 
-const stepMs = replayStepMs(3);
+const stepMs = replayStepMs(3, readingSpanMs(entries));
 
 describe("MapView replay", () => {
   beforeEach(() => {
