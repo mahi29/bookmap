@@ -25,6 +25,8 @@ export async function createReading(
     authors: String(formData.get("authors") ?? ""),
     dateRead: String(formData.get("dateRead") ?? ""),
     rating: String(formData.get("rating") ?? ""),
+    isbn: String(formData.get("isbn") ?? ""),
+    bookId: String(formData.get("bookId") ?? ""),
   });
 
   if (!parsed.ok) {

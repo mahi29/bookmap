@@ -25,11 +25,14 @@ model User {
   imports      Import[]
 }
 
-/// A title with one or more Authors.
+/// A title with one or more Authors. `isbn` is a compact ISBN-13 (978/979 +
+/// valid check digit) or null — unique when present; never hyphenated, ISBN-10,
+/// or another UID. It identifies an edition and is only used to reuse a Book
+/// when it also agrees with the author set (the work).
 model Book {
   id        String       @id @default(cuid())
   title     String
-  isbn      String? // ISBN or other UID from the source; nullable.
+  isbn      String?      @unique
   createdAt DateTime     @default(now())
   authors   BookAuthor[]
   readings  Reading[]

@@ -1,8 +1,8 @@
 # BookMap — a reading tracker with an author-nationality map
 
 > **Living document.** This is the source of truth for BookMap's design and status. Update
-> it when decisions change. Last reconciled at the **PR7 + deploy checkpoint** (multi-user
-> auth shipped; live in production on Vercel + a Neon prod branch).
+> it when decisions change. Last reconciled after **canonical ISBN-13 + addReading reuse
+> tree** (unique compact ISBN-13; reuse vs create, never update authors).
 
 ## Context
 
@@ -27,13 +27,18 @@ date range (e.g. "countries I read in 2026"). Multi-user with username/password 
 | PR6 — CSV importer UI                   | ⬜ not started                                                    |
 | Deploy (Postgres + Vercel)              | ✅ done — live at bookmap-flame.vercel.app (Neon prod branch)     |
 | PR7 — Multi-user auth                   | ✅ done (hand-rolled credentials — see below)                     |
+| Canonical ISBN-13 + addReading reuse    | ✅ done (unique compact ISBN-13; reuse vs create, never authors)  |
 | Future enhancements                     | ⬜ see bottom section                                             |
 
 ## Ubiquitous language (shared glossary)
 
 - **User** — an account (unique username + bcrypt password hash). Readings and Imports
   are per-user; Books/Authors/nationalities are global facts shared by everyone.
-- **Book** — a title with one or more **Authors**; carries an optional ISBN/UID.
+- **Book** — a title with one or more **Authors**; optional unique compact **ISBN-13**
+  (978/979 + valid check digit). ISBN is an edition pointer, not a work id — it is only
+  used to reuse a Book when it also agrees with the author set. Non-ISBNs (other UIDs,
+  ISBN-10 as stored form, hyphenated values) are not kept; they canonicalize or become
+  null.
 - **Author** — a person resolved to **one or more** _map countries_ (see Nationality).
 - **Reading** — an _event_: "User finished Book on date X." A book read twice = two Readings;
   Readings carry the date, so all date-range filtering hangs off them.
@@ -100,7 +105,11 @@ date range (e.g. "countries I read in 2026"). Multi-user with username/password 
 
 - `User` (id, username **unique**, passwordHash [bcrypt; `LOCKED` sentinel = can't log in
   until claimed via `db:set-password`], createdAt)
-- `Book` (id, title, isbn?, createdAt)
+- `Book` (id, title, isbn? **unique**, createdAt). `isbn` is compact ISBN-13 or null
+  (`canonicalizeIsbn` in `src/domains/shared/isbn.ts`). Postgres UNIQUE allows multiple
+  nulls. Seed, `normalizeReadingInput`, and any external book-API mapping write through
+  that function. Collision on migrate: keep the oldest row's ISBN, null the rest — do
+  **not** merge books.
 - `Author` (id, name **unique**, wikidataId?, birthCountryIso3?, resolutionMethod
   [`wikidata`|`openlibrary`|`llm`|`manual`|`unresolved`], confidence?, reasoning?,
   needsReview, resolvedAt). **Known limitation:** `name` is globally `@unique`, so two
@@ -148,8 +157,21 @@ needed. Manual picks survive the whole loop.
 - **Multi-country nationality** — replaced the single-country field with the `AuthorCountry`
   join; resolvers keep every citizenship; dual nationals (Ishiguro→GBR+JPN, Yaa Gyasi→GHA+USA)
   resolve automatically instead of sitting in review.
-- **PR5** — `/add` form: log a book + date; reuses an existing book for re-reads and resolves
-  brand-new authors through Wikidata on submit so the map updates immediately.
+- **PR5** — `/add` form: log a book + date. `addReading` **reuses or creates** a Book
+  (it never updates authors or title on an existing row):
+  1. Canonicalize the submitted ISBN (or null).
+  2. Library pick sent `bookId` → reuse that row.
+  3. ISBN hits **and** the author set matches → reuse. Backfill `isbn` only if the
+     row's isbn is null (and that ISBN-13 is not already taken).
+  4. `findMany` by title, pick the row whose author set matches (not `findFirst`) →
+     reuse, with the same ISBN backfill rule. Covers two _Hungers_ (Hamsun vs Gay)
+     and a Gay re-read.
+  5. Else create `{ title, isbn }` (`isbn` omitted if missing or taken). **Only this
+     path** creates authors and `BookAuthor` rows, then Wikidata-resolves new authors.
+     Countries come from the book actually linked. An extra author on an ISBN hit does
+     **not** get upserted onto the existing book — it creates a new row without the
+     taken ISBN. `bookId` / `isbn` are accepted on the add action so a typeahead can
+     pass a library pick without a third "update authors" path.
 - **Map polish** — a shading legend, and clickable countries that open a sliding right pane
   listing that country's books (title · authors · read date, most-recent first, range-aware).
 - **LLM verify pass (`db:verify-llm`)** — ran Claude over all non-manual authors with book-title
@@ -282,9 +304,13 @@ needed. Manual picks survive the whole loop.
 - **Search-to-add (external book API)** — in `/add`, type a **title** (or ISBN) and autofill
   title + author(s) + ISBN from **Open Library** (`openlibrary.org/search.json`, free, no key)
   or **Google Books** (`googleapis.com/books/v1/volumes`), so you don't type the author.
-  Title search → pick a result → autofill; ISBN lookup is unambiguous. Fully hands-free entry
-  would need barcode/ISBN scanning (browser `BarcodeDetector` + camera). The picked author
-  still flows through the existing Wikidata resolution. Manual entry stays as the fallback.
+  Title search → pick a result → autofill; ISBN lookup is unambiguous. Map industry
+  identifiers through `canonicalizeIsbn` (drop non-ISBNs; ISBN-10 → 13). A library hit
+  should submit `bookId` so `addReading` reuses that row; a Google hit submits
+  title + authors + canonical ISBN and must **not** upsert authors onto an existing
+  book when the author set disagrees. Fully hands-free entry would need barcode/ISBN
+  scanning (browser `BarcodeDetector` + camera). The picked author still flows through
+  Wikidata on the **create** path. Manual entry stays as the fallback.
 - **LLM sweep** — with `ANTHROPIC_API_KEY` in `.env`: `db:resolve-llm` clears the review
   queue, and `db:verify-llm` re-checks **all** non-manual authors against their book titles
   to catch wrong-but-confident Wikidata matches. Manual picks are never touched. (Cost ~$1
@@ -294,8 +320,9 @@ needed. Manual picks survive the whole loop.
 
 - **Memoize `getCountryShapes()`** (`geo.ts`) — it re-parses the TopoJSON on every request
   though the shapes are static; compute once at module load.
-- **Integration test for `addReading`** (`readings.ts`) — the pure normalizer is tested; the
-  DB+resolve mutation is only verified manually.
+- **Integration test for `addReading`** — the reuse/create tree is covered by a fake-Prisma
+  unit suite (two Hungers / Gay re-read, extra-author-on-ISBN, backfill, `bookId` pick).
+  A live-DB integration test is still only manual.
 - **Map keyboard/a11y** — `Choropleth` paths are click-only; `CountryPanel` has no Escape/focus
   management. Fine for personal use; revisit if it goes public.
 - **`getMapEntries` ships the whole dataset to the client** — great at current scale; move
@@ -308,9 +335,10 @@ needed. Manual picks survive the whole loop.
   countries + counter → correct a stray author with `db:set` and see the map update → filter
   to a year and confirm the counter/shading change → add a book via `/add` and confirm it
   appears.
-- **Automated tests:** CSV parser, country successor mapping, the citizenship→countries
-  mapping, coverage/intensity aggregation, LLM interpretation + confidence gate, and add-form
-  input normalization. Wikidata/OpenLibrary HTTP and the Anthropic SDK are mocked (no live
-  calls in tests).
+- **Automated tests:** CSV parser, ISBN canonicalization (ISBN-10→13, check digits, UID
+  drop), country successor mapping, the citizenship→countries mapping, coverage/intensity
+  aggregation, LLM interpretation + confidence gate, add-form input normalization, and
+  `addReading` reuse vs create. Wikidata/OpenLibrary HTTP and the Anthropic SDK are mocked
+  (no live calls in tests).
 - **Data integrity:** every stored country is a valid modern alpha-3; an author has countries
   **iff** not `needsReview`; counts reconcile (resolved + review = total).

@@ -17,6 +17,39 @@ describe("normalizeReadingInput", () => {
     expect(r.value.authors).toEqual(["Yaa Gyasi"]);
     expect(iso(r.value.dateRead)).toBe("2026-03-01");
     expect(r.value.rating).toBe(4.5);
+    expect(r.value.isbn).toBeNull();
+    expect(r.value.bookId).toBeNull();
+  });
+
+  it("canonicalizes a hyphenated ISBN-10 to compact ISBN-13", () => {
+    const r = normalizeReadingInput({
+      title: "The Art of Computer Programming",
+      authors: "Donald Knuth",
+      isbn: "0-306-40615-2",
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.isbn).toBe("9780306406157");
+  });
+
+  it("drops garbage ISBNs and other UIDs rather than failing", () => {
+    const r = normalizeReadingInput({
+      title: "X",
+      authors: "A",
+      isbn: "OL12345678M",
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.isbn).toBeNull();
+  });
+
+  it("trims a library-pick bookId", () => {
+    const r = normalizeReadingInput({
+      title: "Homegoing",
+      authors: "Yaa Gyasi",
+      bookId: "  book123  ",
+    });
+    expect(r.ok && r.value.bookId).toBe("book123");
   });
 
   it("splits and trims multiple authors", () => {

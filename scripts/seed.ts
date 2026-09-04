@@ -6,6 +6,7 @@ import {
 import { prisma } from "../src/infrastructure/db/prisma";
 import { setManualCountries } from "../src/infrastructure/db/prisma-author-resolution-repository";
 import { parseStoryGraphCsv } from "../src/domains/reading-log/storygraph-import";
+import { canonicalizeIsbn } from "../src/domains/shared/isbn";
 import { runScript } from "./shared";
 
 // Seed the DB from a StoryGraph CSV export. This is a DEV-ONLY convenience: it CLEARS
@@ -99,9 +100,15 @@ async function main() {
       // cuids threaded through instead. Left as a perf opportunity (not correctness) if
       // this ever gets slow — see docs/REVIEW.md B3.
       let readingCount = 0;
+      const usedIsbns = new Set<string>();
       for (const book of books) {
+        let isbn = canonicalizeIsbn(book.isbn);
+        if (isbn) {
+          if (usedIsbns.has(isbn)) isbn = null;
+          else usedIsbns.add(isbn);
+        }
         const created = await tx.book.create({
-          data: { title: book.title, isbn: book.isbn },
+          data: { title: book.title, ...(isbn ? { isbn } : {}) },
         });
 
         // A book can list the same author twice in the export; dedupe per book.

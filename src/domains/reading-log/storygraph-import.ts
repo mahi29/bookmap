@@ -1,4 +1,5 @@
 import Papa from "papaparse";
+import { canonicalizeIsbn } from "../shared/isbn";
 
 // Domain module: parse a StoryGraph CSV export into normalized books + reading events.
 // Pure and framework-free — no DB or React here. The seed script/importer maps these
@@ -87,7 +88,7 @@ export function parseStoryGraphCsv(csv: string): ParsedBook[] {
     const title = (row["Title"] ?? "").trim();
     if (!title) continue;
 
-    const isbn = (row["ISBN/UID"] ?? "").trim() || null;
+    const isbn = canonicalizeIsbn(row["ISBN/UID"]);
     books.push({
       title,
       authors: splitAuthors(row["Authors"]),

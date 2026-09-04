@@ -1,11 +1,15 @@
 // Add-reading domain: pure validation/normalization of the raw form fields into a
 // ReadingInput. No I/O here — see reading-service.ts for persistence.
 
+import { canonicalizeIsbn } from "../shared/isbn";
+
 export interface ReadingInput {
   title: string;
   authors: string[];
   dateRead: Date | null;
   rating: number | null;
+  isbn: string | null;
+  bookId: string | null;
 }
 
 export interface RawReadingInput {
@@ -13,6 +17,8 @@ export interface RawReadingInput {
   authors: string;
   dateRead?: string;
   rating?: string;
+  isbn?: string;
+  bookId?: string;
 }
 
 export type NormalizeResult =
@@ -55,5 +61,13 @@ export function normalizeReadingInput(raw: RawReadingInput): NormalizeResult {
     rating = value;
   }
 
-  return { ok: true, value: { title, authors, dateRead, rating } };
+  // Garbage / non-ISBN UIDs are dropped rather than failing the form —
+  // title + authors are enough to create or reuse a book.
+  const isbn = canonicalizeIsbn(raw.isbn);
+  const bookId = raw.bookId?.trim() || null;
+
+  return {
+    ok: true,
+    value: { title, authors, dateRead, rating, isbn, bookId },
+  };
 }

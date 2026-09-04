@@ -38,8 +38,11 @@ Findings ranked by value.
       authors' countries — silently wrong intensity.
       **Fix:** match on title **and** author set (or title+ISBN); else create a new
       book. Failing test first.
-      **Done (TDD)** — book reuse now requires the author-name set to match; a
+      **Done (TDD)** — book reuse requires the author-name set to match; a
       title collision with a different author set creates a new `Book` row.
+      Follow-up: `findFirst` still picked the wrong _Hunger_ on a Gay re-read
+      and ISBN reuse upserted extra authors. Fixed by the canonical-ISBN /
+      reuse-vs-create tree (`findMany` + never update authors).
 
 - [ ] **A3. Countries absent from the 110m geometry vanish from the map but not
       the counter.** Verified: `world-atlas/countries-110m.json` has 177 shapes and

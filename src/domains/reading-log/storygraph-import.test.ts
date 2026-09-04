@@ -5,9 +5,10 @@ import { parseStoryGraphCsv } from "./storygraph-import";
 // include the columns the parser reads. Rows are fabricated (no personal data).
 const CSV = `Title,Authors,ISBN/UID,Read Status,Last Date Read,Dates Read,Read Count,Star Rating
 Memento Mori,Eunice Hong,9781636281872,read,2025/04/12,2025/04/08-2025/04/12,1,4.5
-Good Omens,"Neil Gaiman, Terry Pratchett",9780060853983,read,2024/01/10,,1,5
+Good Omens,"Neil Gaiman, Terry Pratchett",978-0-06-085398-3,read,2024/01/10,,1,5
 The Every,Dave Eggers,,to-read,,,0,
-Dune,Frank Herbert,9780441172719,read,2025/02/01,"2020/01/01-2020/01/15, 2025/01/20-2025/02/01",2,5
+Dune,Frank Herbert,0-441-17271-7,read,2025/02/01,"2020/01/01-2020/01/15, 2025/01/20-2025/02/01",2,5
+Not a Book,A. N. Author,OL12345678M,read,2025/01/01,,1,
 `;
 
 function byTitle(title: string) {
@@ -21,7 +22,7 @@ const iso = (d: Date | null) => d?.toISOString().slice(0, 10) ?? null;
 
 describe("parseStoryGraphCsv", () => {
   it("parses every non-empty row into a book", () => {
-    expect(parseStoryGraphCsv(CSV)).toHaveLength(4);
+    expect(parseStoryGraphCsv(CSV)).toHaveLength(5);
   });
 
   it("splits a single-author field", () => {
@@ -38,6 +39,15 @@ describe("parseStoryGraphCsv", () => {
   it("captures the ISBN, or null when blank", () => {
     expect(byTitle("Memento Mori").isbn).toBe("9781636281872");
     expect(byTitle("The Every").isbn).toBeNull();
+  });
+
+  it("canonicalizes hyphenated ISBN-13 and ISBN-10 to compact ISBN-13", () => {
+    expect(byTitle("Good Omens").isbn).toBe("9780060853983");
+    expect(byTitle("Dune").isbn).toBe("9780441172719");
+  });
+
+  it("drops other UIDs that are not real ISBNs", () => {
+    expect(byTitle("Not a Book").isbn).toBeNull();
   });
 
   it("parses a date range into started + read dates (UTC)", () => {
