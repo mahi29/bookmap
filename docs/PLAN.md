@@ -153,9 +153,11 @@ needed. Manual picks survive the whole loop.
   brand-new authors through Wikidata on submit so the map updates immediately.
 - **Search-to-add** — `/add` title field is a typeahead: library matches first, then Google
   Books (keyless `volumes` search, also by ISBN), capped at 5. Picking a hit fills title +
-  authors and persists ISBN on the `Book`. Editing title or authors after a pick **drops
-  the ISBN** (it may no longer identify that volume). Manual entry remains the fallback
-  when nothing matches. Authors still resolve through Wikidata on submit.
+  authors and persists ISBN on the `Book` (including a lazy backfill onto an existing
+  title+author match whose `isbn` is still null; an already-set ISBN is never clobbered).
+  Editing title or authors after a pick **drops the ISBN** (it may no longer identify that
+  volume). Manual entry remains the fallback when nothing matches. Authors still resolve
+  through Wikidata on submit.
 - **Map polish** — a shading legend, and clickable countries that open a sliding right pane
   listing that country's books (title · authors · read date, most-recent first, range-aware).
 - **LLM verify pass (`db:verify-llm`)** — ran Claude over all non-manual authors with book-title

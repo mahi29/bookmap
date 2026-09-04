@@ -38,6 +38,17 @@ export async function addReading(
     [...inputAuthorSet].every((name) => candidateAuthorSet.has(name));
   const reuse = Boolean(byIsbn) || (Boolean(candidate) && sameAuthors);
 
+  // Lazy ISBN backfill: a typeahead pick for a book already in the library (no
+  // ISBN, typical of CSV seed rows) should write the identifier onto that row.
+  // Never clobber an ISBN that's already set — editions disagree.
+  if (reuse && candidate && input.isbn && !candidate.isbn) {
+    await prisma.book.update({
+      where: { id: candidate.id },
+      data: { isbn: input.isbn },
+    });
+    candidate.isbn = input.isbn;
+  }
+
   const book =
     reuse && candidate
       ? candidate

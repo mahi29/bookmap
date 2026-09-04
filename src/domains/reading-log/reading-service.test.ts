@@ -29,6 +29,10 @@ interface BookFindFirstArgs {
 interface BookCreateArgs {
   data: { title: string; isbn?: string | null };
 }
+interface BookUpdateArgs {
+  where: { id: string };
+  data: { isbn?: string | null };
+}
 interface AuthorUpsertArgs {
   where: { name: string };
   create: { name: string };
@@ -97,6 +101,12 @@ vi.mock("../../infrastructure/db/prisma", () => ({
           isbn: data.isbn ?? null,
         };
         books.push(book);
+        return book;
+      }),
+      update: vi.fn(async ({ where, data }: BookUpdateArgs) => {
+        const book = books.find((b) => b.id === where.id);
+        if (!book) throw new Error(`book ${where.id} not found`);
+        if (data.isbn !== undefined) book.isbn = data.isbn;
         return book;
       }),
     },
@@ -272,5 +282,51 @@ describe("addReading", () => {
 
     expect(books).toHaveLength(1);
     expect(books[0].id).toBe(originalId);
+  });
+
+  it("backfills ISBN onto an existing title+author match that has none", async () => {
+    const first = normalizeReadingInput({
+      title: "Homegoing",
+      authors: "Yaa Gyasi",
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    await addReading(first.value, "user1");
+    expect(books[0].isbn).toBeNull();
+
+    const second = normalizeReadingInput({
+      title: "Homegoing",
+      authors: "Yaa Gyasi",
+      isbn: "9781101947135",
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    await addReading(second.value, "user1");
+
+    expect(books).toHaveLength(1);
+    expect(books[0].isbn).toBe("9781101947135");
+  });
+
+  it("does not overwrite an existing ISBN on a title+author re-read", async () => {
+    const first = normalizeReadingInput({
+      title: "Homegoing",
+      authors: "Yaa Gyasi",
+      isbn: "9781101947135",
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    await addReading(first.value, "user1");
+
+    const second = normalizeReadingInput({
+      title: "Homegoing",
+      authors: "Yaa Gyasi",
+      isbn: "9780000000000",
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    await addReading(second.value, "user1");
+
+    expect(books).toHaveLength(1);
+    expect(books[0].isbn).toBe("9781101947135");
   });
 });
