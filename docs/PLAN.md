@@ -111,10 +111,7 @@ date range (e.g. "countries I read in 2026"). Multi-user with username/password 
   have nowhere to write. Last-name shorthand (e.g. `Hemingway` → Ernest Hemingway)
   only auto-binds when that last name is unique in the catalog (with a preview
   warning); shared last names (`Wilson` matching two Wilsons) are surfaced as
-  ambiguous and never auto-picked. **Follow-up:** drop the uniqueness constraint
-  (and add a disambiguator — Wikidata id, birth year, or an explicit qualifier) so
-  homonymous authors can coexist. Until then, author-set matching for PR6 dedup
-  inherits same-name-same-author.
+  ambiguous and never auto-picked. **Plan:** [`docs/IMPORT.md`](IMPORT.md) (Identity).
 - `AuthorCountry` (authorId, iso3) — `@@id([authorId, iso3])`; the **nationality FK**,
   one author → many countries. This is what the map reads and what manual edits write.
 - `BookAuthor` (bookId, authorId) — co-authored books.
@@ -262,6 +259,7 @@ needed. Manual picks survive the whole loop.
     normalized title + author-set match, AND the same read date (two undated readings of
     the same book also collide). Re-imports are a no-op on repeat. Author-set matching
     inherits same-name-same-author until uniqueness is dropped.
+  - **Follow-ups** (identity first): [`docs/IMPORT.md`](IMPORT.md).
 - **PR7 — Multi-user auth. ✅ Done** (2026-07-04). **Decision reversal:** originally
   penciled in as Auth.js (NextAuth) + invite-only; built instead as **hand-rolled
   credentials with open signup** — for a toy app OAuth felt heavy, Auth.js's Credentials
@@ -302,11 +300,9 @@ needed. Manual picks survive the whole loop.
 
 ## Future enhancements (nice-to-haves, unscheduled)
 
-- **Homonymous authors** — drop `Author.name` `@unique` so two people who share a name
-  can coexist. Needs a disambiguator (Wikidata id when resolved; otherwise a qualifier
-  such as birth year) and importer/`/add` UI to choose “same person” vs “someone new”
-  instead of silently merging. Blocked on that schema change; recorded as a known
-  limitation on `Author` above.
+- **Homonymous authors / identity** — see [`docs/IMPORT.md`](IMPORT.md). Drop
+  `Author.name` `@unique`, confirm same-person vs someone-new on import and `/add`,
+  use `wikidataId` as the person key. v1 still silently merges exact name hits.
 - **Public landing page** — logged-out `/` currently redirects to `/login`. To pitch
   instead: drop `/` from the proxy's protected set (keep `/add`), add a nullable
   `getSession()` helper next to `verifySession()`, and branch `page.tsx` — session → map,
@@ -325,6 +321,9 @@ needed. Manual picks survive the whole loop.
   for the full library on Opus 4.8.)
 
 ### Known follow-ups / tech debt (from the code review, deferred by choice)
+
+- **CSV import robustness** — identity, re-match on commit, ISBN/Open Library, name
+  normalization, Wikidata-after-import: [`docs/IMPORT.md`](IMPORT.md).
 
 - **Memoize `getCountryShapes()`** (`geo.ts`) — it re-parses the TopoJSON on every request
   though the shapes are static; compute once at module load.

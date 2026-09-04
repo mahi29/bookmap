@@ -91,8 +91,7 @@ Findings ranked by value.
       limitation in PLAN.md** (it also shapes PR6 dedup design).
       **Done** — documented in PLAN.md's Author entry, cross-referenced from the
       PR6 dedup-key spec (D2). CSV importer v1 follows the same rule (exact name =
-      same person, no confirm). **Follow-up (unscheduled):** drop uniqueness so
-      homonymous authors can coexist — see PLAN.md Future enhancements.
+      same person, no confirm). **Plan:** [`docs/IMPORT.md`](IMPORT.md) (Identity).
 - [ ] **A7c.** Author names matched byte-exact across seed/add
       ("J.R.R. Tolkien" vs "J. R. R. Tolkien" = two authors). Add name
       normalization at the boundary (natural home: an `AuthorName` value object in
