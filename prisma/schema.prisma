@@ -80,7 +80,7 @@ model Reading {
   dateRead    DateTime? // finish date; null = undated (all-time only, excluded from ranges)
   dateStarted DateTime?
   rating      Float?
-  source      String // storygraph | goodreads | manual
+  source      String // storygraph | goodreads | manual | csv
   importId    String?
   import      Import?   @relation(fields: [importId], references: [id], onDelete: SetNull)
   rawRow      String? // JSON-stringified original source row, for debugging/re-parsing
@@ -95,7 +95,7 @@ model Import {
   id         String    @id @default(cuid())
   userId     String
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  source     String // storygraph | goodreads
+  source     String // storygraph | goodreads | csv
   filename   String
   rowCount   Int
   importedAt DateTime  @default(now())

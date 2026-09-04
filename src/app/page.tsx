@@ -26,9 +26,14 @@ export default async function Home() {
           </form>
         </div>
         <h1 className={styles.title}>A map of what you&apos;ve read.</h1>
-        <Link className={styles.addLink} href="/add">
-          + Add a reading
-        </Link>
+        <div className={styles.navLinks}>
+          <Link className={styles.addLink} href="/add">
+            + Add a reading
+          </Link>
+          <Link className={styles.addLink} href="/import">
+            Import CSV
+          </Link>
+        </div>
       </header>
       <MapView entries={entries} needsReviewCount={needsReviewCount} />
     </main>
