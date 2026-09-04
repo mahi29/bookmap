@@ -100,15 +100,15 @@ describe("rangeThroughMonth + computeCoverage (cumulative replay)", () => {
 });
 
 describe("replayStepMs", () => {
-  it("slows short replays and caps long ones around 15 seconds", () => {
-    expect(replayStepMs(2)).toBe(400); // 2 × 400ms = 0.8s, not a blink
-    expect(replayStepMs(12)).toBe(400); // a year of months: 4.8s
-    expect(replayStepMs(60)).toBe(250); // 15s / 60
-    expect(replayStepMs(200)).toBe(80); // floor so a long library still moves
+  it("slows short replays and caps long ones around 14 seconds", () => {
+    expect(replayStepMs(2)).toBe(750); // 2 × 750ms = 1.5s, not a blink
+    expect(replayStepMs(12)).toBe(750); // a year of months: 9s
+    expect(replayStepMs(20)).toBe(700); // 14s / 20
+    expect(replayStepMs(70)).toBe(200); // floor so a long library still moves
   });
 
   it("treats a single frame as a short pause, not zero", () => {
-    expect(replayStepMs(1)).toBe(400);
-    expect(replayStepMs(0)).toBe(400);
+    expect(replayStepMs(1)).toBe(750);
+    expect(replayStepMs(0)).toBe(750);
   });
 });

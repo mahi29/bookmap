@@ -12,7 +12,7 @@
 .country {
   stroke: var(--map-border);
   stroke-width: 0.3px;
-  transition: fill 0.25s ease;
+  transition: fill 0.4s ease;
   outline: none;
   cursor: pointer;
 }

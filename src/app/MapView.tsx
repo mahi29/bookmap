@@ -52,7 +52,14 @@ export default function MapView({ entries, needsReviewCount }: Props) {
 
   const frames = useMemo(() => listReplayMonths(entries), [entries]);
   const canReplay = frames.length >= 2;
-  const frame = frames[frameIndex] ?? frames[0];
+  const lastIndex = Math.max(frames.length - 1, 0);
+  const clampedIndex = Math.min(frameIndex, lastIndex);
+  const frame = frames[clampedIndex];
+  const atEnd = frames.length > 0 && clampedIndex >= lastIndex;
+  // Derive "is playing" so landing on the last frame flips Pause→Play without
+  // a setState-in-effect, and so we never schedule a tick that walks off the end
+  // (which would fall back to frames[0] and look like a random restart).
+  const isPlaying = playing && !atEnd;
   const stepMs = replayStepMs(frames.length);
 
   const range = useMemo(() => {
@@ -96,17 +103,12 @@ export default function MapView({ entries, needsReviewCount }: Props) {
   );
 
   useEffect(() => {
-    if (!playing) return;
-    const last = frames.length - 1;
-    const id = window.setTimeout(() => {
-      if (frameIndex >= last) {
-        setPlaying(false);
-        return;
-      }
-      setFrameIndex(frameIndex + 1);
+    if (!isPlaying) return;
+    const id = window.setInterval(() => {
+      setFrameIndex((i) => Math.min(i + 1, lastIndex));
     }, stepMs);
-    return () => window.clearTimeout(id);
-  }, [playing, frameIndex, stepMs, frames.length]);
+    return () => window.clearInterval(id);
+  }, [isPlaying, stepMs, lastIndex]);
 
   function startReplay() {
     setSelected(null);
@@ -121,16 +123,16 @@ export default function MapView({ entries, needsReviewCount }: Props) {
   }
 
   function togglePlay() {
-    if (playing) {
+    if (isPlaying) {
       setPlaying(false);
       return;
     }
-    if (frameIndex >= frames.length - 1) setFrameIndex(0);
+    if (atEnd) setFrameIndex(0);
     setPlaying(true);
   }
 
   function selectCountry(iso3: string) {
-    if (playing) setPlaying(false);
+    if (isPlaying) setPlaying(false);
     setSelected((cur) => (cur === iso3 ? null : iso3));
   }
 
@@ -156,9 +158,9 @@ export default function MapView({ entries, needsReviewCount }: Props) {
         <div className={styles.filterGroup}>
           {replay && frame ? (
             <ReplayControls
-              playing={playing}
+              playing={isPlaying}
               frame={frame}
-              frameIndex={Math.min(frameIndex, frames.length - 1)}
+              frameIndex={clampedIndex}
               frameCount={frames.length}
               onTogglePlay={togglePlay}
               onScrub={(index) => {
