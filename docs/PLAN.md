@@ -27,6 +27,7 @@ date range (e.g. "countries I read in 2026"). Multi-user with username/password 
 | PR6 — CSV importer UI                   | ⬜ not started                                                    |
 | Deploy (Postgres + Vercel)              | ✅ done — live at bookmap-flame.vercel.app (Neon prod branch)     |
 | PR7 — Multi-user auth                   | ✅ done (hand-rolled credentials — see below)                     |
+| Search-to-add (Google Books typeahead)  | ✅ done (keyless v1; API key is a follow-up)                      |
 | Future enhancements                     | ⬜ see bottom section                                             |
 
 ## Ubiquitous language (shared glossary)
@@ -150,6 +151,13 @@ needed. Manual picks survive the whole loop.
   resolve automatically instead of sitting in review.
 - **PR5** — `/add` form: log a book + date; reuses an existing book for re-reads and resolves
   brand-new authors through Wikidata on submit so the map updates immediately.
+- **Search-to-add** — `/add` title field is a typeahead: library matches first, then Google
+  Books (keyless `volumes` search, also by ISBN), capped at 5. Picking a hit fills title +
+  authors and persists ISBN on the `Book` (including a lazy backfill onto an existing
+  title+author match whose `isbn` is still null; an already-set ISBN is never clobbered).
+  Editing title or authors after a pick **drops the ISBN** (it may no longer identify that
+  volume). Manual entry remains the fallback when nothing matches. Authors still resolve
+  through Wikidata on submit.
 - **Map polish** — a shading legend, and clickable countries that open a sliding right pane
   listing that country's books (title · authors · read date, most-recent first, range-aware).
 - **LLM verify pass (`db:verify-llm`)** — ran Claude over all non-manual authors with book-title
@@ -279,12 +287,12 @@ needed. Manual picks survive the whole loop.
   none → a `Landing` component (pitch + login/signup buttons; a decorative map is cheap
   since `Choropleth` already takes an `entries` prop). Data fetching stays in the
   logged-in branch, so anonymous visitors never trigger per-user queries. ~1 short session.
-- **Search-to-add (external book API)** — in `/add`, type a **title** (or ISBN) and autofill
-  title + author(s) + ISBN from **Open Library** (`openlibrary.org/search.json`, free, no key)
-  or **Google Books** (`googleapis.com/books/v1/volumes`), so you don't type the author.
-  Title search → pick a result → autofill; ISBN lookup is unambiguous. Fully hands-free entry
-  would need barcode/ISBN scanning (browser `BarcodeDetector` + camera). The picked author
-  still flows through the existing Wikidata resolution. Manual entry stays as the fallback.
+- **Google Books API key** — v1 calls `googleapis.com/books/v1/volumes` **keyless**. That
+  works at low volume but the shared quota is tight and can 429. Follow-up: provision a
+  `GOOGLE_BOOKS_API_KEY`, put it in `.env` / Vercel, and send it on the server-side search
+  (never expose it to the client). Open Library remains an unused alternative.
+- **Barcode / ISBN scanning** — fully hands-free entry would need browser `BarcodeDetector`
+  - camera on `/add`. The typeahead already accepts a typed ISBN.
 - **LLM sweep** — with `ANTHROPIC_API_KEY` in `.env`: `db:resolve-llm` clears the review
   queue, and `db:verify-llm` re-checks **all** non-manual authors against their book titles
   to catch wrong-but-confident Wikidata matches. Manual picks are never touched. (Cost ~$1
@@ -306,11 +314,12 @@ needed. Manual picks survive the whole loop.
 - **Local run:** `npm run dev`; Preview MCP to view/inspect the map.
 - **End-to-end:** `db:seed` a StoryGraph CSV → `db:resolve` → open the map, confirm shaded
   countries + counter → correct a stray author with `db:set` and see the map update → filter
-  to a year and confirm the counter/shading change → add a book via `/add` and confirm it
-  appears.
+  to a year and confirm the counter/shading change → add a book via `/add` (typeahead pick
+  or manual fallback) and confirm it appears.
 - **Automated tests:** CSV parser, country successor mapping, the citizenship→countries
-  mapping, coverage/intensity aggregation, LLM interpretation + confidence gate, and add-form
-  input normalization. Wikidata/OpenLibrary HTTP and the Anthropic SDK are mocked (no live
+  mapping, coverage/intensity aggregation, LLM interpretation + confidence gate, add-form
+  input normalization, Google Books JSON mapping, library/Google hit merge, and ISBN
+  persist/reuse. Wikidata/Google Books HTTP and the Anthropic SDK are mocked (no live
   calls in tests).
 - **Data integrity:** every stored country is a valid modern alpha-3; an author has countries
   **iff** not `needsReview`; counts reconcile (resolved + review = total).

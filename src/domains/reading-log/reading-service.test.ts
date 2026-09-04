@@ -9,6 +9,7 @@ import { normalizeReadingInput } from "./normalize-reading";
 interface FakeBook {
   id: string;
   title: string;
+  isbn: string | null;
 }
 interface FakeAuthor {
   id: string;
@@ -22,11 +23,15 @@ interface FakeBookAuthor {
 }
 
 interface BookFindFirstArgs {
-  where: { title: string };
+  where: { title?: string; isbn?: string };
   include?: { authors?: unknown };
 }
 interface BookCreateArgs {
-  data: { title: string };
+  data: { title: string; isbn?: string | null };
+}
+interface BookUpdateArgs {
+  where: { id: string };
+  data: { isbn?: string | null };
 }
 interface AuthorUpsertArgs {
   where: { name: string };
@@ -70,7 +75,11 @@ vi.mock("../../infrastructure/db/prisma", () => ({
   prisma: {
     book: {
       findFirst: vi.fn(async ({ where, include }: BookFindFirstArgs) => {
-        const candidates = books.filter((b) => b.title === where.title);
+        const candidates = books.filter((b) => {
+          if (where.isbn) return b.isbn === where.isbn;
+          if (where.title) return b.title === where.title;
+          return false;
+        });
         if (candidates.length === 0) return null;
         const book = candidates[0];
         if (include?.authors) {
@@ -86,8 +95,18 @@ vi.mock("../../infrastructure/db/prisma", () => ({
         return book;
       }),
       create: vi.fn(async ({ data }: BookCreateArgs) => {
-        const book: FakeBook = { id: genId("book"), title: data.title };
+        const book: FakeBook = {
+          id: genId("book"),
+          title: data.title,
+          isbn: data.isbn ?? null,
+        };
         books.push(book);
+        return book;
+      }),
+      update: vi.fn(async ({ where, data }: BookUpdateArgs) => {
+        const book = books.find((b) => b.id === where.id);
+        if (!book) throw new Error(`book ${where.id} not found`);
+        if (data.isbn !== undefined) book.isbn = data.isbn;
         return book;
       }),
     },
@@ -225,5 +244,89 @@ describe("addReading", () => {
 
     expect(readings).toHaveLength(1);
     expect(readings[0].userId).toBe("user42");
+  });
+
+  it("persists ISBN on a newly created book", async () => {
+    const input = normalizeReadingInput({
+      title: "Night",
+      authors: "Elie Wiesel",
+      isbn: "978-0-374-50001-6",
+    });
+    expect(input.ok).toBe(true);
+    if (!input.ok) return;
+    await addReading(input.value, "user1");
+
+    expect(books).toHaveLength(1);
+    expect(books[0].isbn).toBe("9780374500016");
+  });
+
+  it("reuses an existing book when the ISBN matches", async () => {
+    const first = normalizeReadingInput({
+      title: "Night",
+      authors: "Elie Wiesel",
+      isbn: "9780374500016",
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    await addReading(first.value, "user1");
+    const originalId = books[0].id;
+
+    const second = normalizeReadingInput({
+      title: "Night: A Memoir",
+      authors: "Elie Wiesel",
+      isbn: "9780374500016",
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    await addReading(second.value, "user1");
+
+    expect(books).toHaveLength(1);
+    expect(books[0].id).toBe(originalId);
+  });
+
+  it("backfills ISBN onto an existing title+author match that has none", async () => {
+    const first = normalizeReadingInput({
+      title: "Homegoing",
+      authors: "Yaa Gyasi",
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    await addReading(first.value, "user1");
+    expect(books[0].isbn).toBeNull();
+
+    const second = normalizeReadingInput({
+      title: "Homegoing",
+      authors: "Yaa Gyasi",
+      isbn: "9781101947135",
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    await addReading(second.value, "user1");
+
+    expect(books).toHaveLength(1);
+    expect(books[0].isbn).toBe("9781101947135");
+  });
+
+  it("does not overwrite an existing ISBN on a title+author re-read", async () => {
+    const first = normalizeReadingInput({
+      title: "Homegoing",
+      authors: "Yaa Gyasi",
+      isbn: "9781101947135",
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    await addReading(first.value, "user1");
+
+    const second = normalizeReadingInput({
+      title: "Homegoing",
+      authors: "Yaa Gyasi",
+      isbn: "9780000000000",
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    await addReading(second.value, "user1");
+
+    expect(books).toHaveLength(1);
+    expect(books[0].isbn).toBe("9781101947135");
   });
 });

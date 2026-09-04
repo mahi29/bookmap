@@ -1,11 +1,14 @@
 // Add-reading domain: pure validation/normalization of the raw form fields into a
 // ReadingInput. No I/O here — see reading-service.ts for persistence.
 
+import { normalizeIsbn } from "../book-search/isbn";
+
 export interface ReadingInput {
   title: string;
   authors: string[];
   dateRead: Date | null;
   rating: number | null;
+  isbn: string | null;
 }
 
 export interface RawReadingInput {
@@ -13,6 +16,7 @@ export interface RawReadingInput {
   authors: string;
   dateRead?: string;
   rating?: string;
+  isbn?: string;
 }
 
 export type NormalizeResult =
@@ -55,5 +59,9 @@ export function normalizeReadingInput(raw: RawReadingInput): NormalizeResult {
     rating = value;
   }
 
-  return { ok: true, value: { title, authors, dateRead, rating } };
+  // A leftover/garbage ISBN (e.g. after the user edited a typeahead pick) is
+  // dropped rather than failing the whole form — title + authors are enough.
+  const isbn = normalizeIsbn(raw.isbn ?? "");
+
+  return { ok: true, value: { title, authors, dateRead, rating, isbn } };
 }

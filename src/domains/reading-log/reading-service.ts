@@ -13,15 +13,22 @@ export async function addReading(
   input: ReadingInput,
   userId: string,
 ): Promise<{ countries: string[] }> {
-  // Reuse an existing book only when both the title AND its author set match (a
-  // re-read) — titles alone collide across unrelated works (e.g. "Hunger" by Knut
-  // Hamsun vs. Roxane Gay), and reusing on title alone would wrongly attribute one
-  // book to both authors' countries.
+  // Identity: ISBN is unambiguous when present. Otherwise reuse an existing book
+  // only when both the title AND its author set match (a re-read) — titles alone
+  // collide across unrelated works (e.g. "Hunger" by Knut Hamsun vs. Roxane Gay).
   const inputAuthorSet = new Set(input.authors);
-  const candidate = await prisma.book.findFirst({
-    where: { title: input.title },
-    include: { authors: { include: { author: true } } },
-  });
+  const byIsbn = input.isbn
+    ? await prisma.book.findFirst({
+        where: { isbn: input.isbn },
+        include: { authors: { include: { author: true } } },
+      })
+    : null;
+  const candidate =
+    byIsbn ??
+    (await prisma.book.findFirst({
+      where: { title: input.title },
+      include: { authors: { include: { author: true } } },
+    }));
   const candidateAuthorSet = candidate
     ? new Set(candidate.authors.map((ba) => ba.author.name))
     : null;
@@ -29,11 +36,25 @@ export async function addReading(
     candidateAuthorSet !== null &&
     candidateAuthorSet.size === inputAuthorSet.size &&
     [...inputAuthorSet].every((name) => candidateAuthorSet.has(name));
+  const reuse = Boolean(byIsbn) || (Boolean(candidate) && sameAuthors);
+
+  // Lazy ISBN backfill: a typeahead pick for a book already in the library (no
+  // ISBN, typical of CSV seed rows) should write the identifier onto that row.
+  // Never clobber an ISBN that's already set — editions disagree.
+  if (reuse && candidate && input.isbn && !candidate.isbn) {
+    await prisma.book.update({
+      where: { id: candidate.id },
+      data: { isbn: input.isbn },
+    });
+    candidate.isbn = input.isbn;
+  }
 
   const book =
-    candidate && sameAuthors
+    reuse && candidate
       ? candidate
-      : await prisma.book.create({ data: { title: input.title } });
+      : await prisma.book.create({
+          data: { title: input.title, isbn: input.isbn },
+        });
 
   const countries = new Set<string>();
   for (const name of new Set(input.authors)) {
