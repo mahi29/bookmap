@@ -85,4 +85,35 @@ describe("normalizeReadingInput", () => {
     });
     expect(r.ok).toBe(false);
   });
+
+  it("keeps a valid ISBN and ignores an empty one", () => {
+    const withIsbn = normalizeReadingInput({
+      title: "Night",
+      authors: "Elie Wiesel",
+      isbn: "978-0-374-50001-6",
+    });
+    expect(withIsbn.ok).toBe(true);
+    if (!withIsbn.ok) return;
+    expect(withIsbn.value.isbn).toBe("9780374500016");
+
+    const blank = normalizeReadingInput({
+      title: "Night",
+      authors: "Elie Wiesel",
+      isbn: "  ",
+    });
+    expect(blank.ok).toBe(true);
+    if (!blank.ok) return;
+    expect(blank.value.isbn).toBeNull();
+  });
+
+  it("drops an ISBN that is no longer a valid identifier", () => {
+    const r = normalizeReadingInput({
+      title: "Night",
+      authors: "Elie Wiesel",
+      isbn: "not-an-isbn",
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.isbn).toBeNull();
+  });
 });
