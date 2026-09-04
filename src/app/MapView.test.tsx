@@ -55,11 +55,6 @@ describe("MapView replay", () => {
 
   afterEach(() => {
     cleanup();
-    const w = window as Window & { __bookmapReplayTick?: number };
-    if (w.__bookmapReplayTick != null) {
-      window.clearInterval(w.__bookmapReplayTick);
-      w.__bookmapReplayTick = undefined;
-    }
     vi.useRealTimers();
   });
 

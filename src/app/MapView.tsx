@@ -24,6 +24,11 @@ interface Props {
 
 const ALL_TIME = "all";
 
+// Invalidated on every effect (re)run so a Fast Refresh remount cannot leave a
+// previous interval's callback mutating frameIndex. Old callbacks see a mismatch
+// and no-op even if clearInterval missed them.
+let replayEpoch = 0;
+
 export default function MapView({ entries, needsReviewCount }: Props) {
   const [period, setPeriod] = useState<string>(ALL_TIME);
   const [selected, setSelected] = useState<string | null>(null);
@@ -103,22 +108,15 @@ export default function MapView({ entries, needsReviewCount }: Props) {
   );
 
   useEffect(() => {
-    // Keep exactly one ticker on `window` so Fast Refresh / Strict Mode remounts
-    // cannot leave a stray interval advancing frames in the background.
-    const w = window as Window & { __bookmapReplayTick?: number };
-    if (w.__bookmapReplayTick != null) {
-      window.clearInterval(w.__bookmapReplayTick);
-      w.__bookmapReplayTick = undefined;
-    }
+    const epoch = ++replayEpoch;
     if (!isPlaying) return;
-    w.__bookmapReplayTick = window.setInterval(() => {
+    const id = window.setInterval(() => {
+      if (epoch !== replayEpoch) return;
       setFrameIndex((i) => Math.min(i + 1, lastIndex));
     }, stepMs);
     return () => {
-      if (w.__bookmapReplayTick != null) {
-        window.clearInterval(w.__bookmapReplayTick);
-        w.__bookmapReplayTick = undefined;
-      }
+      window.clearInterval(id);
+      if (replayEpoch === epoch) replayEpoch += 1;
     };
   }, [isPlaying, stepMs, lastIndex]);
 

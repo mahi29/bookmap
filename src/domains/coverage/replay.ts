@@ -40,11 +40,11 @@ export function rangeThroughMonth(frame: MonthFrame): DateRange {
   return { to: new Date(Date.UTC(frame.year, frame.month + 1, 1)) };
 }
 
-const TARGET_MS = 14_000;
-const MIN_MS = 200;
-const MAX_MS = 750;
+const TARGET_MS = 16_000;
+const MIN_MS = 450;
+const MAX_MS = 900;
 
-/** Per-frame delay so short replays aren't a blink and long ones finish ~14s. */
+/** Per-frame delay so short replays aren't a blink and long ones finish ~16s. */
 export function replayStepMs(frameCount: number): number {
   if (frameCount <= 1) return MAX_MS;
   return Math.round(Math.min(MAX_MS, Math.max(MIN_MS, TARGET_MS / frameCount)));
