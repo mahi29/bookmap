@@ -7,7 +7,9 @@ export default function SignupPage() {
   return (
     <main className={styles.main}>
       <header>
-        <span className={styles.eyebrow}>BookMap</span>
+        <Link className={styles.eyebrow} href="/">
+          BookMap
+        </Link>
         <h1 className={styles.title}>Create your account</h1>
         <p className={styles.pitch}>
           Log the books you read and build your own map of the world&apos;s

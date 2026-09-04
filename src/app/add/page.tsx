@@ -10,7 +10,7 @@ export default function AddPage() {
           <span className={styles.eyebrow}>BookMap</span>
           <h1 className={styles.title}>Add a reading</h1>
         </div>
-        <Link className={styles.back} href="/">
+        <Link className={styles.back} href="/map">
           ← Back to map
         </Link>
       </header>

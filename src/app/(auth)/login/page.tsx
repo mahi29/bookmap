@@ -7,7 +7,9 @@ export default function LoginPage() {
   return (
     <main className={styles.main}>
       <header>
-        <span className={styles.eyebrow}>BookMap</span>
+        <Link className={styles.eyebrow} href="/">
+          BookMap
+        </Link>
         <h1 className={styles.title}>A map of what you&apos;ve read.</h1>
         <p className={styles.pitch}>
           Track your reading and watch the world fill in, country by country, as

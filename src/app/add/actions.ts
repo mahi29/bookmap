@@ -32,7 +32,7 @@ export async function createReading(
   }
 
   const { countries } = await addReading(parsed.value, session.userId);
-  revalidatePath("/");
+  revalidatePath("/map");
 
   const where =
     countries.length > 0

@@ -27,6 +27,7 @@ date range (e.g. "countries I read in 2026"). Multi-user with username/password 
 | PR6 — CSV importer UI                   | ⬜ not started                                                    |
 | Deploy (Postgres + Vercel)              | ✅ done — live at bookmap-flame.vercel.app (Neon prod branch)     |
 | PR7 — Multi-user auth                   | ✅ done (hand-rolled credentials — see below)                     |
+| Public landing page                     | ✅ done (`/` pitches; logged-in visitors redirect to `/map`)      |
 | Map replay (month-by-month timelapse)   | ✅ done                                                           |
 | Future enhancements                     | ⬜ see bottom section                                             |
 
@@ -228,7 +229,8 @@ needed. Manual picks survive the whole loop.
     (applied `add_user` + `reading_import_per_user`, creating the LOCKED `mahith`
     bootstrap user and backfilling all 238 prod readings + 1 import to it), then claimed
     the account with `db:set-password -- mahith …` pointed at prod, then pushed `main`.
-    Live site verified: `/` redirects to `/login`; logging in as `mahith` shows the map.
+    Live site verified at the time: `/` redirected to `/login`; logging in as `mahith`
+    showed the map. `/` is now a public landing page; `/add` remains gated.
   - **Future schema-change recipe for prod:** (1) `prisma migrate deploy` against the
     prod branch first (additive/backfill migrations keep the currently-deployed code
     working), (2) then `git push origin main` to redeploy the code. Never push
@@ -257,12 +259,15 @@ needed. Manual picks survive the whole loop.
       required locally and on Vercel; HttpOnly/secure/lax, 30-day) + a `cache()`d
       `verifySession()` DAL (the real check, in `page.tsx` and mutating server actions) + an
       optimistic redirect gate in `src/proxy.ts` (Next 16 renamed middleware → proxy).
-      Logged-out `/` redirects to `/login` (which carries the pitch + signup link).
+      Logged-out `/` is a public landing page (pitch + sample choropleth +
+      signup/login). Logged-in visitors on `/`, `/login`, or `/signup` redirect
+      to `/map`. Anonymous `/map` redirects to `/` (the pitch); `/add` still
+      sends anonymous visitors to `/login` (a write they already asked for).
   - **Layering:** domain rules in `src/domains/auth/` (`validate-credentials`,
     `auth-service`); mechanisms in `src/infrastructure/auth/` (`password`, `session-token`,
     `session`, `dal`); pages/actions in `src/app/(auth)/`; logout in the map header.
-    The home page is now request-dynamic (reads the session cookie) — no longer
-    prerendered at build time.
+    The map page (`/map`) is request-dynamic (reads the session cookie) — no longer
+    prerendered at build time. `/` redirects a logged-in visitor to `/map`.
   - **Data scoping (as decided):** `Reading` and `Import` carry a `userId` FK (cascade);
     all reading/import queries scope by the logged-in user. `Book`, `Author`, and
     `AuthorCountry` stay **global/shared** — an author's nationality is a universal fact,
@@ -285,12 +290,11 @@ needed. Manual picks survive the whole loop.
 
 ## Future enhancements (nice-to-haves, unscheduled)
 
-- **Public landing page** — logged-out `/` currently redirects to `/login`. To pitch
-  instead: drop `/` from the proxy's protected set (keep `/add`), add a nullable
-  `getSession()` helper next to `verifySession()`, and branch `page.tsx` — session → map,
-  none → a `Landing` component (pitch + login/signup buttons; a decorative map is cheap
-  since `Choropleth` already takes an `entries` prop). Data fetching stays in the
-  logged-in branch, so anonymous visitors never trigger per-user queries. ~1 short session.
+- **Public landing page — ✅ done.** `/` is the pitch: hero + signup/login CTAs + a sample
+  choropleth (static intensity data, not anyone's readings) with hover/tap tooltips, a
+  shared shading legend, and a text list of the sample countries. `/` does not read the
+  session cookie (static, CDN-cacheable); the proxy sends a logged-in visitor to `/map`.
+  Anonymous `/map` redirects to `/`. `/add` stays gated to `/login`. Logout lands on `/`.
 - **Search-to-add (external book API)** — in `/add`, type a **title** (or ISBN) and autofill
   title + author(s) + ISBN from **Open Library** (`openlibrary.org/search.json`, free, no key)
   or **Google Books** (`googleapis.com/books/v1/volumes`), so you don't type the author.
@@ -308,8 +312,11 @@ needed. Manual picks survive the whole loop.
   though the shapes are static; compute once at module load.
 - **Integration test for `addReading`** (`readings.ts`) — the pure normalizer is tested; the
   DB+resolve mutation is only verified manually.
-- **Map keyboard/a11y** — `Choropleth` paths are click-only; `CountryPanel` has no Escape/focus
-  management. Fine for personal use; revisit if it goes public.
+- **Map keyboard/a11y** — public landing: the sample choropleth is `role="img"` with a
+  sample-specific accessible name, tap/hover inspect, and a `<details>` country list as
+  the text alternative (paths are not a tab stop — hundreds of countries). Logged-in
+  `CountryPanel` closes on Escape and focuses the close button. Remaining: choropleth
+  paths on `/map` are still click/hover rather than a keyboard grid.
 - **`getMapEntries` ships the whole dataset to the client** — great at current scale; move
   aggregation server-side if the library gets large or goes multi-user.
 

@@ -48,5 +48,8 @@ export async function deleteSession(): Promise<void> {
 export async function readSession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
+  // No cookie means no session — don't demand SESSION_SECRET (the public landing
+  // must render in a preview or a local `npm run dev` without .env).
+  if (!token) return null;
   return decryptSessionToken(token, sessionSecret());
 }

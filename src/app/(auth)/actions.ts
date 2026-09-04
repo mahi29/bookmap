@@ -26,7 +26,7 @@ async function authenticate(
   if (!result.ok) return { message: result.error };
 
   await createSession(result.value);
-  redirect("/");
+  redirect("/map");
 }
 
 export async function loginAction(

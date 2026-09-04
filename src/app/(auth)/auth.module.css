@@ -11,11 +11,18 @@
 }
 
 .eyebrow {
+  display: inline-block;
   font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--accent);
+  text-decoration: none;
+}
+
+.eyebrow:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .title {

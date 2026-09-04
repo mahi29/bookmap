@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { geoEqualEarth, geoPath } from "d3-geo";
 import type { FeatureCollection } from "geojson";
 import { getCountryShapes } from "@/domains/coverage/geo";
@@ -17,18 +17,38 @@ const MAX_SHADE_PCT = 85;
 
 interface Props {
   byCountry: Record<string, number>;
-  selectedIso3: string | null;
-  onSelect: (iso3: string) => void;
+  selectedIso3?: string | null;
+  onSelect?: (iso3: string) => void;
+  ariaLabel?: string;
+  describedBy?: string;
   /** When set, the shading ramp uses this as max intensity so replay frames
    *  only get darker, never wash out as the running max grows. */
   shadeMax?: number;
 }
 
 interface Hover {
+  iso3: string | null;
   name: string;
   count: number;
   x: number;
   y: number;
+}
+
+function tooltipFromEvent(
+  wrap: HTMLDivElement | null,
+  e: { clientX: number; clientY: number },
+  shape: { iso3: string | null; name: string },
+  count: number,
+): Hover | null {
+  const rect = wrap?.getBoundingClientRect();
+  if (!rect) return null;
+  return {
+    iso3: shape.iso3,
+    name: shape.name,
+    count,
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top,
+  };
 }
 
 // Shade from the empty-country color toward the accent. sqrt compresses the scale so a
@@ -42,12 +62,15 @@ function fillFor(count: number, max: number): string {
 
 export default function Choropleth({
   byCountry,
-  selectedIso3,
+  selectedIso3 = null,
   onSelect,
+  ariaLabel = "World map shaded by number of books read per country",
+  describedBy,
   shadeMax,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<Hover | null>(null);
+  const [pinned, setPinned] = useState<Hover | null>(null);
 
   // Loaded client-side (not passed from the server) so the static geometry ships as part
   // of the cacheable client JS bundle instead of being re-serialized into the RSC payload
@@ -72,13 +95,25 @@ export default function Choropleth({
     return Math.max(1, shadeMax ?? dataMax);
   }, [byCountry, shadeMax]);
 
+  const tooltip = hover ?? pinned;
+
+  useEffect(() => {
+    if (!pinned) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setPinned(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pinned]);
+
   return (
     <div className={styles.wrap} ref={wrapRef}>
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className={styles.map}
         role="img"
-        aria-label="World map shaded by number of books read per country"
+        aria-label={ariaLabel}
+        aria-describedby={describedBy}
       >
         {shapes.map((shape, i) => {
           const d = pathGen(shape.geometry);
@@ -89,29 +124,35 @@ export default function Choropleth({
             <path
               key={shape.iso3 ?? `shape-${i}`}
               d={d}
-              className={`${styles.country} ${selected ? styles.selected : ""}`}
+              className={`${styles.country} ${selected ? styles.selected : ""} ${styles.interactive}`}
               style={{ fill: fillFor(count, max) }}
-              onClick={() => shape.iso3 && onSelect(shape.iso3)}
+              onClick={(e) => {
+                if (onSelect) {
+                  if (shape.iso3) onSelect(shape.iso3);
+                  return;
+                }
+                const next = tooltipFromEvent(wrapRef.current, e, shape, count);
+                if (!next) return;
+                setPinned((cur) => (cur?.iso3 === next.iso3 ? null : next));
+              }}
               onMouseMove={(e) => {
-                const rect = wrapRef.current?.getBoundingClientRect();
-                if (!rect) return;
-                setHover({
-                  name: shape.name,
-                  count,
-                  x: e.clientX - rect.left,
-                  y: e.clientY - rect.top,
-                });
+                const next = tooltipFromEvent(wrapRef.current, e, shape, count);
+                if (next) setHover(next);
               }}
               onMouseLeave={() => setHover(null)}
             />
           );
         })}
       </svg>
-      {hover && (
-        <div className={styles.tooltip} style={{ left: hover.x, top: hover.y }}>
-          <strong>{hover.name}</strong>{" "}
+      {tooltip && (
+        <div
+          className={styles.tooltip}
+          style={{ left: tooltip.x, top: tooltip.y }}
+          aria-hidden="true"
+        >
+          <strong>{tooltip.name}</strong>{" "}
           <span className={styles.count}>
-            {hover.count} {hover.count === 1 ? "book" : "books"}
+            {tooltip.count} {tooltip.count === 1 ? "book" : "books"}
           </span>
         </div>
       )}

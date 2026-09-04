@@ -15,6 +15,7 @@ import {
 } from "@/domains/coverage/replay";
 import Choropleth from "./Choropleth";
 import CountryPanel from "./CountryPanel";
+import MapLegend from "./MapLegend";
 import ReplayControls, { formatMonthFrame } from "./ReplayControls";
 import styles from "./MapView.module.css";
 
@@ -221,11 +222,7 @@ export default function MapView({ entries, needsReviewCount }: Props) {
         </div>
       </header>
 
-      <div className={styles.legend}>
-        <span className={styles.legendLabel}>Fewer</span>
-        <span className={styles.legendBar} aria-hidden="true" />
-        <span className={styles.legendLabel}>More books</span>
-      </div>
+      <MapLegend />
 
       <Choropleth
         byCountry={byCountry}
